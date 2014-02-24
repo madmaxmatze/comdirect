@@ -1,0 +1,46 @@
+.clear  {clear:both;overflow:hidden;font-size:0;line-height:0;height:0;margin:0;padding:0;}
+br.clear {display: none;}
+.mobile br.clear {display: block;}
+
+.mmmdepotdiv {margin:0; padding:0; font-size: 0px;}
+.mmmdepot {margin:0; padding:0; border-collapse: collapse; width: 99%; table-layout: fixed;}
+.mmmdepot td, .mmmdepot th {overflow:hidden; font-size: 9pt; line-height: 8pt; font-family: Tahoma; white-space: nowrap; padding: 1px; margin:0px;}
+.mmmdepot .finanzNachrichtenCell {min-width: 20px; max-width: 20px; width: 20px; text-align: right;}
+.mmmdepot td.finanzNachrichtenCell .finanzNachrichtenLink {height: 12px; display: inline; background: url(http://www.finanznachrichten.de/favicon.ico) center center no-repeat;}
+.mmmdepot td.stockname {text-align: left; text-overflow: ellipsis;}
+.mmmdepot tr.alternate {background-color: #EEE;}
+
+.mmmdepot tr.stockrow:hover  {background-color: #dcdefd !important;}
+.mmmdepot tr.stockrow:hover  a {}
+
+.mmmdepot th {text-align: center; background-color: #dcdefd; font-weight: bold; border-top: 2px solid black; border-bottom: 2px solid black;}
+.mmmdepot .borderleft {border-left: 1px solid #888;}
+.mmmdepot .alignright {text-align: right;}
+.mmmdepot .alignleft {text-align: left;}
+.mmmdepot td.info {font-size:8pt; color:#3A3A3A;}
+.mmmdepot td.sizer {width: 150px;}
+.mmmdepot td a, .mmmdepot td a:visited, .mmmdepot th a, .mmmdepot th a:visited {text-decoration: none; color: #222;}
+.mmmdepot td a:hover, .mmmdepot th a:hover {text-decoration: underline; color: blue;}
+	
+
+
+.mobile .mmmdepot td, .mobile .mmmdepot th {
+	font-size: 27pt !important; 
+	line-height: 27pt !important;
+}	
+.mobile .mmmdepot .finanzNachrichtenCell {min-width: 30px; max-width: 30px; width: 30px;}
+.mobile .mmmdepot td.sizer {width: 400px;}
+.mobile .android , .mobile .triangle {display: none !important;}
+
+
+.guv, .stockcicle {
+	float: left; 
+}
+.mobile .guv,
+.mobile .stockcicle,
+	float: none; 
+	clear: both;
+}	
+.mobile .guv img, .mobile .stockcicle img {
+	width: 100%
+}
