@@ -20,7 +20,7 @@ class ComdirectDepotLoader{
 		if ($depotHtml !== null){
 			$depot = new ComdirectDepot($depotKey);
 			$depotHtml = $this->replaceStringsInContent($depotHtml);
-			
+		
 			$depot->setTitle($this->getTitle($depotHtml));
 			$depot->setStocks($this->getStocks($depotHtml));
 			$depot->setTotalValue($this->getCurrentTotalValue($depotHtml));
@@ -90,9 +90,9 @@ class ComdirectDepotLoader{
 
 	public function getStocks($depotHtml) {
 		$stocks = array();
-
+	
 		$stocksHtml = "";
-		if (preg_match('/<\/thead>\s*<tbody>(.+?)<\/tbody>/s', $depotHtml, $match)) {
+		if (preg_match("/\<\/thead\>\s*\<tbody\>(.+)\<\/tbody\>/s", $depotHtml, $match)) {
 			$stocksHtml = $match[1];
 		}
 

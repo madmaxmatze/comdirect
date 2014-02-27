@@ -66,26 +66,30 @@ if ($portfolioKey){
 						"</tr>";
 				
 				foreach ($depot->getStocks() as $stock) {
-					$todayChange = ($stock->getDifferencePercentage() ? "-" : number_format($stock->getDifferencePercentage(), 2, ',', '.') . "%");
-					
-					$isFinanznachrichten = ($stock->getType() == "Aktie" && $stock->isCurrencyEur()); 
-					$out .= "<tr class='stockrow " . (1 ? "alternate " : "") . "' title='" .
-								"Kauf: " . $stock->getCount() . " x " . $stock->getPrice() . "&euro; = " . strip_tags($stock->getTotalBuyPrice()) . "&euro; (" . $stock->getBuyDate() . ") | " .
-								"Aktuell: " . $stock->getPrice() . "&euro; (GuV=" . $stock->getDifferenceAbsolute() . "&euro;) "  .
-							"'>".
-							"<td class='stockname'" . ($isFinanznachrichten ? "" : " colspan='2'") . "><a href='" . $stock->getUrl() . "' target='_blank'>" . $stock->getName() . "</a></td>".
-							($isFinanznachrichten ? "<td class='finanzNachrichtenCell'>".						
-								"<a href='http://www.finanznachrichten.de/suche/suchergebnis.asp?words=" . $stock->getWkn() . "' target='_blank'>".
-									"<div class='finanzNachrichtenLink' title='open related news'>&#160;&#160;&#160;&#160;</div>".
-								"</a>" .
-							"</td>" : "") .
-							
-							"<td class='alignright borderleft'>" . 
-							($stock->getPrice() < 1 && strlen($stock->getPrice()) > 4 ? str_replace('.', ',', $stock->getPrice()) : number_format($stock->getPrice(), 2, ',', '.')) . $stock->getCurrencySymbol() . "</td>".
-							"<td class='alignright' style='color: " . $depotHelper->getColorForNumber($stock->getDifferencePercentage()) . "'>" . number_format($stock->getDifferencePercentage(), 2, ',', '.') . "%</td>".
-							"<td class='alignright borderleft' style='color: " . $depotHelper->getColorForNumber($stock->getTotalDifferencePercentage()) . "'>" . number_format($stock->getTotalDifferencePercentage(), 2, ',', '.') . "%</td>".
-							
-						"</tr>";
+					try {
+						$todayChange = ($stock->getDifferencePercentage() ? "-" : number_format($stock->getDifferencePercentage(), 2, ',', '.') . "%");
+						
+						$isFinanznachrichten = ($stock->getType() == "Aktie" && $stock->isCurrencyEur()); 
+						$out .= "<tr class='stockrow " . (1 ? "alternate " : "") . "' title='" .
+									"Kauf: " . $stock->getCount() . " x " . $stock->getPrice() . "&euro; = " . strip_tags($stock->getTotalBuyPrice()) . "&euro; (" . $stock->getBuyDate() . ") | " .
+									"Aktuell: " . $stock->getPrice() . "&euro; (GuV=" . $stock->getDifferenceAbsolute() . "&euro;) "  .
+								"'>".
+								"<td class='stockname'" . ($isFinanznachrichten ? "" : " colspan='2'") . "><a href='" . $stock->getUrl() . "' target='_blank'>" . $stock->getName() . "</a></td>".
+								($isFinanznachrichten ? "<td class='finanzNachrichtenCell'>".						
+									"<a href='http://www.finanznachrichten.de/suche/suchergebnis.asp?words=" . $stock->getWkn() . "' target='_blank'>".
+										"<div class='finanzNachrichtenLink' title='open related news'>&#160;&#160;&#160;&#160;</div>".
+									"</a>" .
+								"</td>" : "") .
+								
+								"<td class='alignright borderleft'>" . 
+								($stock->getPrice() < 1 && strlen($stock->getPrice()) > 4 ? str_replace('.', ',', $stock->getPrice()) : number_format($stock->getPrice(), 2, ',', '.')) . $stock->getCurrencySymbol() . "</td>".
+								"<td class='alignright' style='color: " . $depotHelper->getColorForNumber($stock->getDifferencePercentage()) . "'>" . number_format($stock->getDifferencePercentage(), 2, ',', '.') . "%</td>".
+								"<td class='alignright borderleft' style='color: " . $depotHelper->getColorForNumber($stock->getTotalDifferencePercentage()) . "'>" . number_format($stock->getTotalDifferencePercentage(), 2, ',', '.') . "%</td>".
+								
+							"</tr>";
+					} catch (Exception $exception) {
+				
+					}
 				}
 				
 				$currencySymbol = $depotHelper->getCurrencySymbol($depot->getCurrency());
@@ -111,8 +115,20 @@ if ($portfolioKey){
 							"</th>".
 						"</tr>";
 				
-				$stockGuVImageUrl = $depotHelper->getStockGuVImageUrl($depot);
-				$stockCircleImageUrl = $depotHelper->getStockCircleImageUrl($depot);
+				$stockGuVImageUrl = "";
+				try {
+					$stockGuVImageUrl = $depotHelper->getStockGuVImageUrl($depot);
+				} catch (Exception $exception) {
+
+				}
+
+				$stockCircleImageUrl = "";
+				try {
+					$stockCircleImageUrl = $depotHelper->getStockCircleImageUrl($depot);
+				} catch (Exception $exception) {
+				
+				}
+
 				$out .= '<tr><td colspan="4"><br>' .
 							'<a class="guv" style="margin: 20px; border: 1px solid #DDD" href="' . $stockGuVImageUrl . '">' . 
 								'<img src="' . $stockGuVImageUrl . '" />' . 

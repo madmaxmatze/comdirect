@@ -2,6 +2,8 @@
 
 
 class ComdirectDepotHelper {
+	// https://developers.google.com/chart/image/docs/post_requests?hl=de-DE
+
 	public function getStockGuVImageUrl($depot) {
 		$names = array();
 		$labels = array();
@@ -37,10 +39,19 @@ class ComdirectDepotHelper {
 			$firstDigit *= 10;
 			$potenz -= 1;
 		}
-		$steps = pow(10, $potenz);
+		$steps = max(1, pow(10, $potenz));
 		$dataSeriesMax = $firstDigit * $steps;
 		
-		return "https://chart.googleapis.com/chart?chs=500x" . min(600, ($depot->getStockCount() * 28 + 35)) . "&cht=bhs&chd=t:" . join(",", $dataSeries[0]) . "|" . join(",", $dataSeries[1]) . "&chco=555555," . join("|", $colorSeries[1]) . "&chxt=x,x,y&chxp=1,50&chxr=0,0," . $firstDigit . "," . 1 . "&chds=0," . $dataSeriesMax . "&chxl=1:|in " . $steps . " Euro|2:|" . join("|", $names) . "&chg=" . (floor(100000 / ($dataSeriesMax / $steps)) / 1000) . ",100,10,5,0," . ($positiveStockCount/$depot->getStockCount() * 100) . "&chm=" . join("|", $labels);
+		return "https://chart.googleapis.com/chart?" . 
+					"chs=500x" . min(600, ($depot->getStockCount() * 28 + 35)) . 
+					"&cht=bhs" . 
+					"&chd=t:" . join(",", $dataSeries[0]) . "|" . join(",", $dataSeries[1]) . 
+					"&chco=555555," . join("|", $colorSeries[1]) . 
+					"&chxt=x,x,y&chxp=1,50&chxr=0,0," . $firstDigit . "," . 1 . 
+					"&chds=0," . $dataSeriesMax . 
+					"&chxl=1:|in " . $steps . " Euro|2:|" . join("|", $names) . 
+				//	"&chg=" . (floor(100000 / ($dataSeriesMax / $steps)) / 1000) . ",100,10,5,0," . ($positiveStockCount/$depot->getStockCount() * 100) . 
+					"&chm=" . join("|", $labels);
 	}
 
 
@@ -87,7 +98,11 @@ class ComdirectDepotHelper {
 			$colorSeries[0][] = sprintf("%02X%02X%02X", $colors[0], $colors[1], $colors[2]);
 		}
 		
-		return "https://chart.googleapis.com/chart?cht=p&chs=800x350&chp=" . (-6.28 / 4) . "&chd=t:" . join(",", $dataSeries[0]) . "&chl=" . join("|", $names) . "&chco=" . join("|", $colorSeries[0]);
+		return "https://chart.googleapis.com/chart?cht=p&chs=800x350" . 
+					"&chp=" . (-6.28 / 4) . 
+					"&chd=t:" . join(",", $dataSeries[0]) . 
+					"&chl=" . join("|", $names) . 
+					"&chco=" . join("|", $colorSeries[0]);
 	}
 
 
