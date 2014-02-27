@@ -50,7 +50,7 @@ class ComdirectDepotHelper {
 					"&chxt=x,x,y&chxp=1,50&chxr=0,0," . $firstDigit . "," . 1 . 
 					"&chds=0," . $dataSeriesMax . 
 					"&chxl=1:|in " . $steps . " Euro|2:|" . join("|", $names) . 
-				//	"&chg=" . (floor(100000 / ($dataSeriesMax / $steps)) / 1000) . ",100,10,5,0," . ($positiveStockCount/$depot->getStockCount() * 100) . 
+					"&chg=" . (floor(100000 / ($dataSeriesMax / $steps)) / 1000) . ",100,10,5,0," . ($positiveStockCount / $depot->getStockCount() * 100) . 
 					"&chm=" . join("|", $labels);
 	}
 

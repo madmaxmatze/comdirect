@@ -128,7 +128,7 @@ class ComdirectDepotLoader{
 		$stock->setCount($this->toNumber($data[0]));
 		
 		$stock->setUrl($data[1]);
-		$stock->setName($data[2]);
+		$stock->setName($this->parseStockName($data[2]));
 
 		$stock->setWKN($data[3]);
 		$stock->setType($data[4]);
@@ -153,6 +153,22 @@ class ComdirectDepotLoader{
 		
 		return $stock;
 	}
+
+	private function parseStockName($name){
+		// add spaces for the replacement
+		$name = " " . $name . " ";
+
+		// replace special chars
+		$name = str_replace("&#8203;", "", $name);	
+
+		// cut away crap in names (starting from things like AG to the end) 
+		$name = preg_replace("/(\ ag\ |Namens\-Aktien\ O\.N\.|plc|inc\.|\ kgaa\ |Reg\.|Fund\ |\ corp|\,|act\.|reg\.|\ LC|inhaber|\/|\ kgag\ |\ se\ |\ co\ |\ cp\ |co\.|\ \- \ A|\ A \ ).*$/i", "", $name);
+		// make first letter of all words (text with leading space) big if only in big or only in small letters - so don't do with eg: ProSiebenMedia AG 
+		$name = preg_replace("/(\ ([A-Z]+|[a-z]+))/e", "ucwords(strtolower('\\1'))", $name);
+		
+		return trim($name);
+	}
+
 
 	private function getCreateCleanedUpArray($html){
 		$data = explode("\n", $html);
