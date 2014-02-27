@@ -70,20 +70,6 @@ class ComdirectStock{
 		return $this->currency;
 	}
 
-	public function getCurrencySymbol() {
-		if ($this->currencySymbol === null) {
-			$this->currencySymbol = "?";
-			
-			if ($this->currency == "EUR") {
-				$this->currencySymbol = "&euro;";
-			} elseif ($this->currency == "USD") {
-				$this->currencySymbol = "$";
-			}
-		}
-
-		return $this->currencySymbol;
-	}
-
 	public function isCurrencyEur() {
 		return ($this->currency = "EUR");
 	}

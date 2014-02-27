@@ -10,13 +10,14 @@ $out = "";
 $portfolioKey = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? $_GET['portfolio_key'] : null);
 if ($portfolioKey){
 	$depotLoader = new ComdirectDepotLoader();
+	$depotHelper = new ComdirectDepotHelper();
 
 	$portfolioKeys = explode(",", trim($portfolioKey));
 	foreach ($portfolioKeys as $portfolioKey) {
 		if ($portfolioKey == "header") {
-			$dollar = getDollar();
-			$dax = getDax();
-			$dj = getDow();
+			$dollar = $depotHelper->getDollar();
+			$dax = $depotHelper->getDax();
+			$dj = $depotHelper->getDow();
 		} else {
 
 		}
@@ -40,15 +41,11 @@ if ($portfolioKey){
 			$depot = $depotLoader->load($portfolioKey);
 			
 			if (isset($_GET["type"]) && $_GET["type"] == "qr") {
-				$imageGenerator = new ComdirectDepotImage($depot);
-				
-				header("Location: " . $imageGenerator->getQRCodeImageUrl());
+				header("Location: " . $depotHelper->getQRCodeImageUrl($portfolioKey));
 				die();
 			}
 
 			if ($depot) {  	
-				$depotHelper = new ComdirectDepotHelper();
-
 				$out .= "<tr>".				// headline
 							// colspan=2 because of finanznachrichten link
 							"<th class='alignleft stockname' colspan='2'>". 
