@@ -5,6 +5,10 @@ class ComdirectDepotHelper {
 	// https://developers.google.com/chart/image/docs/post_requests?hl=de-DE
 
 	public function getStockGuVImageUrl($depot) {
+		if (!$depot->getStockCount()) {
+			return "";
+		}
+
 		$names = array();
 		$labels = array();
 		$dataSeries = array(array(), array(),);
@@ -17,7 +21,7 @@ class ComdirectDepotHelper {
 			$name = substr($name, 0, 25);
 			array_unshift($names, $name);
 			
-			if ($stock->getDifferenceAbsolute() > 0) {
+			if ($stock->getTotalDifferenceAbsolute() > 0) {
 				$positiveStockCount++;
 			}
 			
@@ -51,11 +55,16 @@ class ComdirectDepotHelper {
 					"&chds=0," . $dataSeriesMax . 
 					"&chxl=1:|in " . $steps . " Euro|2:|" . join("|", $names) . 
 					"&chg=" . (floor(100000 / ($dataSeriesMax / $steps)) / 1000) . ",100,10,5,0," . ($positiveStockCount / $depot->getStockCount() * 100) . 
-					"&chm=" . join("|", $labels);
+					"&chm=" . join("|", $labels)
+					;
 	}
 
 
 	public function getStockCircleImageUrl($depot) {
+		if (!$depot->getStockCount()) {
+			return "";
+		}
+
 		$names = array();
 		$dataSeries = array(array(), array(),);
 		$colorSeries = array(array(), array(),);
@@ -123,49 +132,13 @@ class ComdirectDepotHelper {
 		return $currencySymbol;
 	}
 
-	public function getColorForNumber($number) {
-		if ($number === null) {
-			return '#828181';			// grau: #828181
-		} else if ($number >= 1) {
-			return '#00BF00';			// gruen: #00BF00
+	public function getColorForNumber ($number) {
+		if ($number >= 1) {
+			return '#00BF00';			// gruen
 		} else if ($number <= -1) {
-			return '#DF0000';			// rot: #DF0000
+			return '#DF0000';			// rot
 		}
 
-		return '#828181';				// grau: #828181
-	}
-
-
-
-	public function getDollar() {
-		return $this->getYahooInformation('http://download.finance.yahoo.com/d/quotes.csv?s=EURUSD=X&f=sl1d1t1c1ohgv&e=.csv');
-	}
-	
-	public function getDax() {
-		return $this->getYahooInformation('http://download.finance.yahoo.com/d/quotes.csv?s=%5EGDAXI&f=sl1d1t1c1ohgv&e=.csv');
-	}
-	
-	public function getDow() {
-		return $this->getYahooInformation('http://download.finance.yahoo.com/d/quotes.csv?s=%5EDJI&f=sl1d1t1c1ohgv&ignore=.csv');
-	}
-
-	// http://www.gummy-stuff.org/Yahoo-data.htm  -  DowJones not working
-	// http://finance.yahoo.com/d/quotes.csv?s=%5EDJI+EURUSD=X+%5EGDAXI&f=snd1l1yr
-
-	protected function getYahooInformation ($url) {
-		if ($filedata = @getUrlContent($url)) {
-			$file = explode(',', $filedata);
-			$retVal['value'] = floor($file[1] * 100) / 100;
-			if ($file[4] != 'N/A') {
-				$retVal['diffabs'] = floor($file[4]);
-				$retVal['diffabs'] = ($retVal['diffabs'] > 0 ? '+' : '') . $retVal['diffabs'];
-				if (is_int($retVal['value'])) {
-					$retVal['diffpro'] = floor(($retVal['diffabs'] / $retVal['value']) * 10000) / 100; 
-					$retVal['diffpro'] = ($retVal['diffpro'] > 0 ? '+' : '') . $retVal['diffpro'];
-				}
-			}
-			return $retVal;
-		}
-		return "";
+		return '#444';				// grau:
 	}
 }

@@ -1,35 +1,31 @@
 ﻿<?php
 
 class ComdirectDepotLoader{
-	private $startTime = 0;
-	private $stopTime = 0;
-
 	public function __construct() {
 	}
 
 	public function load($depotKey) {
-		$depot = null;
-		
-		$this->startTime = microtime(true); 
-		
-		$depotKey = $this->parseDepotKey($depotKey);
-		
-		$depotUrl = ComdirectDepot::COMDIRECT_FRIENDS_URL . $depotKey;		
-		$depotHtml = $this->getContentFromUrl($depotUrl);
-		
+		$depot = new ComdirectDepot($depotKey);
+
+		$depotHtml = $this->getContentFromUrl($depot->getUrl());
 		if ($depotHtml !== null){
-			$depot = new ComdirectDepot($depotKey);
 			$depotHtml = $this->replaceStringsInContent($depotHtml);
 		
-			$depot->setTitle($this->getTitle($depotHtml));
-			$depot->setStocks($this->getStocks($depotHtml));
-			$depot->setTotalValue($this->getCurrentTotalValue($depotHtml));
-			$depot->setDiffererenceAbsolute($this->getDiffererenceAbsolute($depotHtml));
-			$depot->setDifferenceAbsoluteComparedToYesterday($this->getDifferenceAbsoluteComparedToYesterday($depotHtml));
-			$depot->setCurrency($this->getCurrency($depotHtml));
+			$currentTotalValue = $this->getCurrentTotalValue($depotHtml);
+			if ($currentTotalValue) {
+				$depot->setTitle($this->getTitle($depotHtml));
+				$depot->setTotalValue($currentTotalValue);
+				$depot->setBuyTotalValue($this->getBuyTotalValue($depotHtml));
+				$depot->setStocks($this->getStocks($depotHtml));
+				$depot->setDiffererenceAbsolute($this->getDiffererenceAbsolute($depotHtml));
+				$depot->setDifferenceAbsoluteComparedToYesterday($this->getDifferenceAbsoluteComparedToYesterday($depotHtml));
+				$depot->setCurrency($this->getCurrency($depotHtml));
+			}
+		} else {
+			die("loading failed");
 		}
 		
-		$this->stopTime = microtime(true); 	
+		$depot->loadingFinished();
 
 		return $depot;
 	}
@@ -41,6 +37,15 @@ class ComdirectDepotLoader{
 		}
 	
 		return $title;
+	}
+
+	private function getBuyTotalValue($depotHtml) {
+		$totalValue = 0;
+		if (preg_match('/Kaufwert\:.*?title\=\"(.*?)"/s', $depotHtml, $match)) {
+			$totalValue = $this->toNumber($match[1]);
+		}
+		
+		return $totalValue;
 	}
 
 	private function getCurrentTotalValue($depotHtml) {
@@ -80,14 +85,6 @@ class ComdirectDepotLoader{
 		return $totalDifferenceToYesterday;
 	}
 
-	public function getLoadingDuration() {
-		return sprintf ("%01.3f", ($this->stopTime - $this->startTime) / 1000000) . " sec";
-	}
-
-	public function getLoadingTime() {
-		return $this->startTime - (15 * 60);
-	}
-
 	public function getStocks($depotHtml) {
 		$stocks = array();
 	
@@ -103,7 +100,7 @@ class ComdirectDepotLoader{
 			}
 		}
 
-		usort($stocks, array("ComdirectStock", "compareByPercentageDifference"));
+		usort($stocks, array("ComdirectStock", "compareByPercentageAbsolute"));
 
 		return $stocks;
 	}
@@ -125,6 +122,7 @@ class ComdirectDepotLoader{
 		// var_export($data);
 
 		$stock = new ComdirectStock();
+
 		$stock->setCount($this->toNumber($data[0]));
 		
 		$stock->setUrl($data[1]);
@@ -135,7 +133,7 @@ class ComdirectDepotLoader{
 		$stock->setCurrency($data[5]);
 
 		$stock->setPrice($this->toNumber($data[6]));
-		$stock->setDifferenceAbsolute($this->toNumber($data[7]));
+		$stock->setDifferenceAbsolutePerStock($this->toNumber($data[7]));
 		$stock->setDifferencePercentage($this->toNumber($data[8]));
 
 		$stock->setTotalPrice($this->toNumber($data[9]));
@@ -147,8 +145,7 @@ class ComdirectDepotLoader{
 		$stock->setBuyPrice($this->toNumber($data[15]));
 		$stock->setBuyDate($data[16]);
 		$stock->setTotalBuyPrice($this->toNumber($data[17]));
-									
-		// var_export($stock);
+		
 		// $output[$i]['DIFFABSTODAY'] = $output[$i]['COUNT'] * $output[$i]['DIFFABS'];
 		
 		return $stock;
@@ -162,7 +159,7 @@ class ComdirectDepotLoader{
 		$name = str_replace("&#8203;", "", $name);	
 
 		// cut away crap in names (starting from things like AG to the end) 
-		$name = preg_replace("/(\ ag\ |Namens\-Aktien\ O\.N\.|plc|inc\.|\ kgaa\ |Reg\.|Fund\ |\ corp|\,|act\.|reg\.|\ LC|inhaber|\/|\ kgag\ |\ se\ |\ co\ |\ cp\ |co\.|\ \- \ A|\ A \ ).*$/i", "", $name);
+		$name = preg_replace("/(\ ag\ |Namens\-Aktien\ O\.N\.|\ Oyj|\ Vz|plc|inc\.|\ kgaa\ |Reg\.|Fund\ |\ corp|\ Com|\,|act\.|reg\.|\ \-\ LC|\ \-\ Ld|inhaber|\/|\ kgag\ |\ se\ |\ GmbH|\ co\ |\ cp\ |co\.|\ \-\ P\ |\ \-\ A|\ A\ |\'A\').*$/i", "", $name);
 		// make first letter of all words (text with leading space) big if only in big or only in small letters - so don't do with eg: ProSiebenMedia AG 
 		$name = preg_replace("/(\ ([A-Z]+|[a-z]+))/e", "ucwords(strtolower('\\1'))", $name);
 		
@@ -176,11 +173,6 @@ class ComdirectDepotLoader{
 		$data = array_filter($data, array($this, "arrayFilterNotEmpty"));
 		$data = array_values($data);
 		return $data;
-	}
-
-	private function parseDepotKey($depotKey) {
-		$depotKey = preg_replace("/\D*/", "", $depotKey);
-		return $depotKey;
 	}
 
 	private function getContentFromUrl ($url) {

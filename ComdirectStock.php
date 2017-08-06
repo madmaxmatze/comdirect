@@ -9,7 +9,7 @@ class ComdirectStock{
 	private $currencySymbol = null;
 	private $url = "";
 	private $price = "";
-	private $differenceAbsolute = 0;
+	private $differenceAbsolutePerStock = 0;
 	private $differencePercentage = 0;
 	private $totalPrice = 0;
 	private $totalDifferenceAbsolute = 0;
@@ -17,13 +17,18 @@ class ComdirectStock{
 	private $buyPrice = 0;
 	private $buyDate = 0;
 	private $date = null;
+	private $now = null;
 
 	public function __construct() {
-	
-	}
+		$this->now = new DateTime('now');
+	} 
 
 	static function compareByPercentageDifference($a, $b) {
 		return ($a->getTotalDifferencePercentage() > $b->getTotalDifferencePercentage());
+	}
+
+	static function compareByPercentageAbsolute($a, $b) {
+		return ($a->getTotalDifferenceAbsolute() > $b->getTotalDifferenceAbsolute());
 	}
 
 	public function setCount($count){
@@ -70,8 +75,22 @@ class ComdirectStock{
 		return $this->currency;
 	}
 
+	public function getCurrencySymbol() {
+		if ($this->currencySymbol === null) {
+			$this->currencySymbol = "?";
+			
+			if ($this->currency == "EUR") {
+				$this->currencySymbol = "&euro;";
+			} elseif ($this->currency == "USD") {
+				$this->currencySymbol = "$";
+			}
+		}
+
+		return $this->currencySymbol;
+	}
+
 	public function isCurrencyEur() {
-		return ($this->currency = "EUR");
+		return ($this->currency == "EUR");
 	}
 
 	public function setUrl($url) {
@@ -90,12 +109,16 @@ class ComdirectStock{
 		return $this->price;
 	}
 
-	public function setDifferenceAbsolute($differenceAbsolute) {
-		$this->differenceAbsolute = $differenceAbsolute;
+	public function setDifferenceAbsolutePerStock($differenceAbsolutePerStock) {
+		$this->differenceAbsolutePerStock = $differenceAbsolutePerStock;
+	}
+
+	public function getDifferenceAbsolutePerStock() {
+		return $this->differenceAbsolutePerStock;
 	}
 
 	public function getDifferenceAbsolute() {
-		return $this->differenceAbsolute;
+		return $this->differenceAbsolutePerStock * $this->count;
 	}
 
 	public function setDifferencePercentage($differencePercentage) {
@@ -168,5 +191,13 @@ class ComdirectStock{
 
 	public function getDate() {
 		return $this->date;
-	}		
+	}
+
+	public function getAgeOfDataInSeconds() {
+		return ($this->now->getTimestamp() - $this->getDate()->getTimestamp());
+	}
+
+	public function isDataFromToday() {
+		return ($this->getDate()->format('d') == $this->now->format('d'));
+	}
 }
