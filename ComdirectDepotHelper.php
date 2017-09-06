@@ -4,6 +4,66 @@
 class ComdirectDepotHelper {
 	// https://developers.google.com/chart/image/docs/post_requests?hl=de-DE
 
+
+	public function getDepotDevelopmentHtml($depot) {
+		if (!$depot->getStockCount()) {
+			return "";
+		}
+	
+		$html = "";
+
+		$depot->sortByTotalValue();
+
+		// https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
+		$colors = array(
+						"333333", 	// gray (default)
+						"0082c8",	// blue
+						"911eb4",	// purple
+						"e6194b",	// red
+						"f58231",	// orange
+						"fabebe",	// light pink
+						"ffe119",	// yellow
+						"aaffc3",	// mind    (3cb44b = green)
+						"46f0f0",	// cyan	
+						"808000", 	// olive
+					);
+
+
+		$ids = array();
+		// more then 10 is not allowed by codirect
+		$stocks = array_slice(array_reverse($depot->getStocks()), 0, 10);
+		
+		$totalValue = 0;
+
+		foreach ($stocks as $i => $stock) {
+			$html .= "<span style='color: white; white-space: nowrap; background-color: #" . $colors[$i] . "'> " . $stock->getName() . " </span> &#160;";
+			$ids[] = $stock->getId();
+			$totalValue += $stock->getTotalPrice();
+		}
+
+		// example: https://charts.comdirect.de/charts/rebrush/design_big.chart?WIDTH=645&HEIGHT=655&TYPE=CONNECTLINE&TIME_SPAN=6M&AXIS_SCALE=lin&DATA_SCALE=rel&LNOTATIONS=160043+9386187+16093838+176173+163291185+149533891+119194090+194281+37324151+112645451&LCOLORS=5F696E+5F696E+5F696E+5F696E+5F696E+5F696E+5F696E+5F696E+5F696E+5F696E&AVGTYPE=simple&HCMASK=3&SHOWHL=1
+		
+		$html = 'Top10 Stocks (' . round($totalValue / $depot->getTotalValue() * 100) . '% of total)<br>' . 
+				
+				"<script>
+					$().ready(function() { 
+						$('.imgwrapper img').click(function() {
+							var src = $(this).attr('src')
+										.replace('10D', '6XXX')
+										.replace('5Y', '10D')
+										.replace('6M', '5Y')
+										.replace('6XXX', '6M');
+							$(this).attr('src', src);
+						});
+					});
+				</script>" . 
+
+				'<a class="imgwrapper"><img src="' . "https://charts.comdirect.de/charts/rebrush/design_big.chart?TYPE=CONNECTLINE&TIME_SPAN=10D&AXIS_SCALE=log&DATA_SCALE=rel&LNOTATIONS=" . implode($ids, "+") . "&LCOLORS=" . implode($colors, "+") . "&AVGTYPE=simple&HCMASK=3&SHOWHL=0" . '" /></a><br>' . $html;
+
+		return "<div style='display: block; float: none; clear: both;'>" . $html . "</div>";
+	}
+
+
 	public function getStockGuVImageUrl($depot) {
 		if (!$depot->getStockCount()) {
 			return "";
@@ -132,13 +192,14 @@ class ComdirectDepotHelper {
 		return $currencySymbol;
 	}
 
-	public function getColorForNumber ($number) {
-		if ($number >= 1) {
-			return '#00BF00';			// gruen
-		} else if ($number <= -1) {
-			return '#DF0000';			// rot
-		}
+	public function getColorForNumber ($numberBetweenMinusAndPlus100) {
+		$minColor = 80;
+		$maxColor = 230;
+		$number = $numberBetweenMinusAndPlus100  * ($maxColor - $minColor) / 100;
 
-		return '#444';				// grau:
+		$red = round(min($maxColor, $minColor - ($number < 0 ? $number : 0)));
+		$green = round(min($maxColor, $minColor + ($number > 0 ? $number : 0)));
+
+		return "rgb($red, $green, $minColor)";
 	}
 }

@@ -8,6 +8,7 @@ class ComdirectDepotLoader{
 		$depot = new ComdirectDepot($depotKey);
 
 		$depotHtml = $this->getContentFromUrl($depot->getUrl());
+
 		if ($depotHtml !== null){
 			$depotHtml = $this->replaceStringsInContent($depotHtml);
 		
@@ -47,6 +48,17 @@ class ComdirectDepotLoader{
 		
 		return $totalValue;
 	}
+
+
+	private function getStockId($depotHtml) {
+		$id = "";
+		if (preg_match('/ID\_NOTATION\=(:*?)\&amp\;/s', $depotHtml, $match)) {
+			$id = $match[1];
+		}
+	
+		return $id;
+	}
+
 
 	private function getCurrentTotalValue($depotHtml) {
 		$totalValue = 0;

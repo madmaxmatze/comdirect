@@ -151,6 +151,12 @@ class ComdirectDepot{
 		$this->stopTime = microtime(true); 
 	}
 
+
+	public function sortByTotalValue() {
+		usort($this->stocks, array("ComdirectStock", "compareByTotalValue"));
+	}
+
+
 	public function getLoadingDuration() {
 		return $this->stopTime - $this->startTime;
 	}

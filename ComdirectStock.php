@@ -2,6 +2,7 @@
 
 class ComdirectStock{
 	private $count = 0;
+	private $id = "";
 	private $name = "";
 	private $wkn = "";
 	private $type = "";
@@ -22,6 +23,10 @@ class ComdirectStock{
 	public function __construct() {
 		$this->now = new DateTime('now');
 	} 
+
+	static function compareByTotalValue($a, $b) {
+		return ($a->getTotalPrice() > $b->getTotalPrice());
+	}
 
 	static function compareByPercentageDifference($a, $b) {
 		return ($a->getTotalDifferencePercentage() > $b->getTotalDifferencePercentage());
@@ -49,6 +54,14 @@ class ComdirectStock{
 	
 	public function getName() {
 		return $this->name;
+	}
+
+	public function getId() {
+		if (!$this->id && preg_match('/ID\_NOTATION\=(.*?)\&amp\;NAME\_PORTFOLIO/s', $this->url, $match)) {
+			$this->id = $match[1];
+		}
+	
+		return $this->id;
 	}
 
 	public function setWkn($wkn) {

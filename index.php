@@ -38,6 +38,9 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 		<script type="text/javascript" src="https://bowercdn.net/c/jquery.tablesorter-2.0.24/js/jquery.tablesorter.min.js"></script> 
   		<script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js"></script>
       
+      	<link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/qtip2/3.0.3/basic/jquery.qtip.min.css" />
+		<script type="text/javascript" src="https://cdn.jsdelivr.net/qtip2/3.0.3/basic/jquery.qtip.min.js"></script>
+
         <!-- 
 			<link rel='stylesheet' href='//apps.mathiasnitzsche.de/comdirect/depot.css' />
         -->
@@ -70,14 +73,6 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 				overflow:hidden; 
 				position: relative;
 			}
-
-			.neg	{
-				color:red;
-			}
-
-			.pos	{
-				color:green;
-			}
 			
 			.mmmdepot td.stockname a {
 				display: block; 
@@ -103,13 +98,12 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 			.mmmdepot td a, .mmmdepot td a:visited, .mmmdepot th a, .mmmdepot th a:visited {text-decoration: none; color: #222;}
 			.mmmdepot td a:hover, .mmmdepot th a:hover {text-decoration: underline; color: blue;}
 
-			.guv, .stockcicle {
+			.imgwrapper {
 		        margin-top: 10px;
 		    	width: 600px;
 		    	float: left;	
 		    }	
-		    .guv img,
-		    .stockcicle img {
+		    .imgwrapper img {
 		    	width: 100%;	
 		    }
 
@@ -117,14 +111,14 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 	    	, tr > *:nth-child(3)
 	    	, tr > *:nth-child(8)
 	    	, tr > *:nth-child(11)
-	    	 {
+	    	{
     			border-left: 1px solid #aaa;
 			}
 	    	tr > *:nth-child(1)
 			, tr > *:nth-child(2)
 	    	, tr > *:nth-child(7)
 	    	, tr > *:nth-child(10)
-	    	 {
+	    	{
     			border-right: 1px solid #aaa;
 	    	}
 
@@ -141,7 +135,7 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 			    */
 	    	}
 	    	td.isDataFromYesterday span {
-	    		opacity: 0.15;
+				opacity: 0.3;
 			    /*
 			    text-decoration: line-through; 
 			    text-decoration-style: solid; 
@@ -162,10 +156,15 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 	    	}
 
 			@media only screen and (max-width: 700px) {
-				tr th:nth-child(1), tr td:nth-child(1)
+				.qtip-default
+				, tr th:nth-child(1), tr td:nth-child(1)
 				, tr th:nth-child(4), tr td:nth-child(4)
 				{
 					display:none; visibility:hidden;
+				}
+				.imgwrapper {
+					width: 100%;
+					float: none;
 				}
 			}
 
@@ -175,10 +174,6 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 				{
 					display:none; visibility:hidden;
 				}
-				.guv, .stockcicle {
-					width: 100%;
-					float: none;
-				}
 			}
 
 			@media only screen and (max-width: 500px) {
@@ -186,10 +181,6 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 				, tr th:nth-child(7), tr td:nth-child(7)
 				{
 					display:none; visibility:hidden;
-				}
-				.guv, .stockcicle {
-					width: 100%;
-					float: none;
 				}
 			}
 
@@ -205,6 +196,13 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 				{
 					display:none; visibility:hidden;
 				}
+			}
+
+			/* make white */
+			.qtip-default{
+				border: 1px solid gray;
+				background-color: white;
+				max-width: 1000px;
 			}
 		</style>
 		<script type="text/javascript">
@@ -251,7 +249,26 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 				        i++;
 				    });
 			    });
-			}); 
+
+
+				$('[data-wkn!=""]').each(function() {
+				    var wkn = $(this).data("wkn");
+				    if ($(this).data("wkn")) {
+					    $(this).find("td.stockname").qtip({ // 
+					        content: {
+					            text: 
+					            	"<img src='https://charts.comdirect.de/charts/rebrush/design_small.ewf.chart?WIDTH=256&HEIGHT=173&TIME_SPAN=5Y&TYPE=MOUNTAIN&ID_NOTATION=" + wkn + "'> " +
+					            	"<img src='https://charts.comdirect.de/charts/rebrush/design_small.ewf.chart?WIDTH=256&HEIGHT=173&TIME_SPAN=6M&TYPE=MOUNTAIN&ID_NOTATION=" + wkn + "'>" +
+					            	"<img src='https://charts.comdirect.de/charts/rebrush/design_small.ewf.chart?WIDTH=256&HEIGHT=173&TIME_SPAN=10D&TYPE=MOUNTAIN&ID_NOTATION=" + wkn + "'>"
+					        },
+					        style: {
+							    width: 800
+							}
+					    });
+				    }
+				});
+
+			});
 		</script>
     </head>
     <body><?php
@@ -275,36 +292,29 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 
 				if ($depot && $depot->isValid()) {  			
 					$out .= "<table border='0' class='mmmdepot tablesorter' cellspacing='0' cellpadding='0'>" .
-							"<thead>" .
-							"<tr>".
-								"<th>#</th>".
-								// colspan=2 because of finanznachrichten link
-								"<th class='alignleft stockname'>". 
-									"<a style='float: left; margin-right: 4px; vertical-align: middle' href='http://www.comdirect.de/inf/musterdepot/pmd/freunde.html?portfolio_key=" . $portfolioKey . "&SORT=PROFIT_LOSS_POTENTIAL_CURRENCY_PORTFOLIO_PCT&SORTDIR=ASCENDING' target='_blank' title='" . $depot->getTitle() . " | loaded in " . sprintf ("%01.3f", $depot->getLoadingDuration() / 1000000) . "s | last update " . date("d.M H:i", $depot->getLoadingTime()). " (15min delayed)'>" . $depot->getTitle() . "</a> ". 
+								"<thead>" .
+								"<tr>".
+									"<th>#</th>".
+									// colspan=2 because of finanznachrichten link
+									"<th class='alignleft stockname'>". 
+										"<a style='float: left; margin-right: 4px; vertical-align: middle' href='http://www.comdirect.de/inf/musterdepot/pmd/freunde.html?portfolio_key=" . $portfolioKey . "&SORT=PROFIT_LOSS_POTENTIAL_CURRENCY_PORTFOLIO_PCT&SORTDIR=ASCENDING' target='_blank' title='" . $depot->getTitle() . " | loaded in " . sprintf ("%01.3f", $depot->getLoadingDuration() / 1000000) . "s | last update " . date("d.M H:i", $depot->getLoadingTime()). " (15min delayed)'>" . $depot->getTitle() . 
+										"</a> ". 
+									"</th>".
+									"<th>Kaufdatum</th>".
+									"<th>Börse</th>".
+									"<th>Kaufkurs</th>".
+									"<th>Anzahl</th>".
+									"<th>Kaufwert</th>".
+							
+									"<th>Kurs</th>".
+									"<th>%</th>".
+									"<th>Abs</th>".
 									
-									/*
-										"<a target='_blank' class='' title='Open in new window' href='?portfolio_key=" . urldecode($portfolioKey) . "' style='height: 12px; width: 16px; display:inline-block; overflow: hidden;'><img src='https://lh4.googleusercontent.com/-jDj_8QoCWtI/Ty6Lpm2TefI/AAAAAAAAGO8/IFqXEteEIsw/s800/newWindow.png' style='border: none' /></a> " .
-								
-										"<a target='_blank' class='qrcode' title='Show QR-code to transfer you depot url to your smartphone' 
-											href='?portfolio_key=" . urldecode($portfolioKey) . "&type=qr' style='height: 12px; width: 16px; display:inline-block; overflow: hidden;'>
-											<img src='https://lh5.googleusercontent.com/-zJPLUu7eljk/Ty6H23crfTI/AAAAAAAAGOk/kv9KrXFvW9o/s800/qrcode-small.png' style='border: none' /></a> " .
-									*/
-								"</th>".
-								"<th>Kaufdatum</th>".
-								"<th>Börse</th>".
-								"<th>Kaufkurs</th>".
-								"<th>Anzahl</th>".
-								"<th>Kaufwert</th>".
-						
-								"<th>Kurs</th>".
-								"<th>%</th>".
-								"<th>Abs</th>".
-								
-								"<th>Wert</th>".
-								"<th>%</th>".
-								"<th class='headerSortUp'>Abs</th>".
-							"</tr>" .
-							"</thead>" .
+									"<th>Wert</th>".
+									"<th>%</th>".
+									"<th class='headerSortUp'>Abs</th>".
+								"</tr>" .
+								"</thead>" .
 							"<tbody>";
 					
 					$i = 0;
@@ -321,10 +331,7 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 							}
 							
 							$isFinanznachrichten = ($stock->getType() == "Aktie"); 
-							$out .= "<tr class='" . ($i++ % 2 ? "even" : "odd") . "' title='" .
-										"Kauf: " . $stock->getCount() . " x " . $stock->getBuyPrice() . "€ = " . strip_tags($stock->getTotalBuyPrice()) . "&euro; (" . $stock->getBuyDate() . ") | " .
-										"Aktuell: " . $stock->getPrice() . $stock->getCurrencySymbol() . " (GuV=" . $stock->getDifferenceAbsolute() . "&euro;) "  .
-									"'>".
+							$out .= "<tr data-wkn='" . $stock->getId() . "' class='" . ($i++ % 2 ? "even" : "odd") . "'>".
 										"<td>" . $i . "</td>".
 										"<td class='stockname'>" . 
 											"<a href='" . $stock->getUrl() . "' target='_blank'>" . $stock->getName() . "</a>".
@@ -353,19 +360,19 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 
 
 										// Aktueller Preis
-										"<td class='" . ($stock->getAgeOfDataInSeconds() < 2000 ? "isDataLive" : "") . "' title='" . $stock->getDate()->format("Y/m/d H:i:s") . "'>" . ($stock->getPrice() < 1 && strlen($stock->getPrice()) > 4 ? str_replace('.', ',', $stock->getPrice()) : number_format($stock->getPrice(), 2, ',', '.')) . $stock->getCurrencySymbol() . "</td>".
-										"<td class='" . $stockClass . "' style='color: " . $depotHelper->getColorForNumber($stock->getDifferencePercentage()) . "'><span>" . number_format($stock->getDifferencePercentage(), 2, ',', '.') . "%</span></td>".
-										"<td class='" . $stockClass . "' style='color: " . $depotHelper->getColorForNumber($stock->getDifferencePercentage()) . "'><span>" . number_format($stock->getDifferenceAbsolute(), 0, ',', '.') . "€</span></td>".
+										"<td class='" . ($stock->getAgeOfDataInSeconds() < 2000 ? "isDataLive1" : "") . "' title='" . $stock->getDate()->format("Y/m/d H:i:s") . "'><span>" . ($stock->getPrice() < 1 && strlen($stock->getPrice()) > 4 ? str_replace('.', ',', $stock->getPrice()) : number_format($stock->getPrice(), 2, ',', '.')) . $stock->getCurrencySymbol() . "</span></td>".
+										"<td class='" . $stockClass . "' style='color: " . $depotHelper->getColorForNumber($stock->getDifferencePercentage() * 100) . "'><span>" . number_format($stock->getDifferencePercentage(), 2, ',', '.') . "%</span></td>".
+										"<td class='" . $stockClass . "' style='color: " . $depotHelper->getColorForNumber($stock->getDifferencePercentage() * 100) . "'><span>" . number_format($stock->getDifferenceAbsolute(), 0, ',', '.') . "€</span></td>".
 								
 
 										// Akt Gesamtwert
 										"<td>" . number_format($stock->getTotalPrice(), 0, ',', '.') . "€</td>".
 									
 										// Gesamtprozent
-										"<td style='color: " . $depotHelper->getColorForNumber($stock->getTotalDifferencePercentage()) . "'>" . number_format($stock->getTotalDifferencePercentage(), 1, ',', '.') . "%</td>".
+										"<td style='color: " . $depotHelper->getColorForNumber($stock->getTotalDifferenceAbsolute() / $depot->getTotalValue() * 10000) . "'>" . number_format($stock->getTotalDifferencePercentage(), 1, ',', '.') . "%</td>".
 
 										// Gewinn
-										"<td style='color: " . $depotHelper->getColorForNumber($stock->getTotalDifferencePercentage()) . "'>" . number_format($stock->getTotalDifferenceAbsolute(), 0, ',', '.') . "€</td>".
+										"<td style='color: " . $depotHelper->getColorForNumber($stock->getTotalDifferenceAbsolute() / $depot->getTotalValue() * 10000) . "'>" . number_format($stock->getTotalDifferenceAbsolute(), 0, ',', '.') . "€</td>".
 									"</tr>";
 
 						} catch (Exception $exception) {
@@ -415,15 +422,12 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 								"</tr>";
 					
 					$stockGuVImageUrl = "";
+					$stockCircleImageUrl = "";
+					$depotDevelopmentHtml = "";
 					try {
 						$stockGuVImageUrl = $depotHelper->getStockGuVImageUrl($depot);
-					} catch (Exception $exception) {
-
-					}
-
-					$stockCircleImageUrl = "";
-					try {
 						$stockCircleImageUrl = $depotHelper->getStockCircleImageUrl($depot);
+						$depotDevelopmentHtml = $depotHelper->getDepotDevelopmentHtml($depot);
 					} catch (Exception $exception) {
 					
 					}	
@@ -431,13 +435,15 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 					$out .= "</table>";
 
 					$out .= '<br>' .
-							'<a class="guv" href="' . $stockGuVImageUrl . '">' . 
+							'<a class="imgwrapper" href="' . $stockGuVImageUrl . '">' . 
 								'<img src="' . $stockGuVImageUrl . '" />' . 
 							'</a>' .
 							'<br class="clear"><br>' . 
-							'<a class="stockcicle" href="' . $stockCircleImageUrl . '">' . 
+							'<a class="imgwrapper" href="' . $stockCircleImageUrl . '">' . 
 								'<img src="' . $stockCircleImageUrl . '" />' . 
 							'</a>' . 
+							'<br class="clear"><br>' . 
+							$depotDevelopmentHtml . 
 							'<br class="clear"> ' . 
 							'';
 				
@@ -450,6 +456,17 @@ $portfolioKeyParam = (isset($_GET['portfolio_key']) && $_GET['portfolio_key'] ? 
 			$out = 'Please provide a comdirect.de portfolio_key as explained <a href="https://nutzer.comdirect.de/cms/help/core0432_help.html" target="_blank" rel="nofollow">here</a>.';
 		}
 
-		echo $out; ?>
+		echo $out; 
+		?>
 	</body>
 </html>
+
+
+<!-- 
+
+https://developers.google.com/chart/image/docs/gallery/line_charts
+
+
+https://chart.googleapis.com/chart?cht=lc&chd=s:UVVUVVUUUVVUSSVVVXXYadfhjlllllllmmliigdbbZZXVVUUUTU&chco=0000FF&chls=2.0,1.0,0.0&chxt=x,y&chxl=0:|Sept|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Aug|Aug|Aug|1:%7C0%7C25%7C50%7C75%7C100&chs=600x400&chg=100.0,25.0&chf=c,ls,0,CCCCCC,0.8,FFFFFF,1
+
+-->
