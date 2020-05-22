@@ -1,12 +1,15 @@
-﻿<?php
+<?php
 
 class ComdirectStock{
 	private $count = 0;
+	private $totalCount = 0;
 	private $id = "";
 	private $name = "";
+	private $isin = "";
 	private $wkn = "";
+	private $symbol = "";
 	private $type = "";
-	private $currency = "";
+	private $currency = "EUR";
 	private $currencySymbol = null;
 	private $url = "";
 	private $price = "";
@@ -32,8 +35,24 @@ class ComdirectStock{
 		return ($a->getTotalDifferencePercentage() > $b->getTotalDifferencePercentage());
 	}
 
-	static function compareByPercentageAbsolute($a, $b) {
-		return ($a->getTotalDifferenceAbsolute() > $b->getTotalDifferenceAbsolute());
+	static function compareByDifferenceAbsolute($a, $b) {
+		// primiary sort
+		$diffA = $a->getTotalDifferenceAbsolute();
+		$diffB = $b->getTotalDifferenceAbsolute();
+		if ($diffA === 0) {
+			$diffA = 0.001;
+		}
+		if ($diffB === 0) {
+			$diffB = 0.001;
+		}
+
+		$diff = $diffA - $diffB;
+		if ($diff) {
+			return $diff > 0;
+		}
+
+		// secondary sort
+		return $a->getName() > $b->getName();
 	}
 
 	public function setCount($count){
@@ -42,6 +61,14 @@ class ComdirectStock{
 
 	public function getCount(){
 		return $this->count;
+	}
+
+	public function setTotalCount($totalCount){
+		$this->totalCount = $totalCount;
+	}
+
+	public function getTotalCount(){
+		return $this->totalCount;
 	}
 
 	public function getCountRounded(){
@@ -56,11 +83,11 @@ class ComdirectStock{
 		return $this->name;
 	}
 
+	public function setId($id) {
+		$this->id = $id;
+	}
+
 	public function getId() {
-		if (!$this->id && preg_match('/ID\_NOTATION\=(.*?)\&amp\;NAME\_PORTFOLIO/s', $this->url, $match)) {
-			$this->id = $match[1];
-		}
-	
 		return $this->id;
 	}
 
@@ -72,6 +99,22 @@ class ComdirectStock{
 		return $this->wkn;
 	}
 
+	public function setSymbol($symbol) {
+		$this->symbol = $symbol;
+	}
+
+	public function getSymbol() {
+		return $this->symbol;
+	}
+
+	public function setIsin($isin) {
+		$this->isin = $isin;
+	}
+
+	public function getIsin() {
+		return $this->isin;
+	}
+
 	public function setType($type) {
 		$this->type = $type;
 	}
@@ -81,7 +124,10 @@ class ComdirectStock{
 	}
 
 	public function setCurrency($currency) {
-		$this->currency = $currency;
+		$currency = preg_replace("/\W*/i", "", $currency);
+		if ($currency) {
+			$this->currency = $currency;
+		}
 	}
 
 	public function getCurrency() {
@@ -111,6 +157,7 @@ class ComdirectStock{
 	}
 
 	public function getUrl() {
+		return "https://www.comdirect.de/inf/aktien/detail/uebersicht.html?ID_NOTATION=" . $this->getId();
 		return $this->url;
 	}
 
@@ -131,7 +178,10 @@ class ComdirectStock{
 	}
 
 	public function getDifferenceAbsolute() {
-		return $this->differenceAbsolutePerStock * $this->count;
+		return ($this->isBoughtToday() ? 
+			$this->getTotalDifferenceAbsolute() : 
+			$this->differenceAbsolutePerStock * $this->count
+		);
 	}
 
 	public function setDifferencePercentage($differencePercentage) {
@@ -206,11 +256,23 @@ class ComdirectStock{
 		return $this->date;
 	}
 
+	public function getFormatedDate($format) {
+		return ($this->getDate() ? $this->getDate()->format($format) : "n/a");
+	}
+
 	public function getAgeOfDataInSeconds() {
-		return ($this->now->getTimestamp() - $this->getDate()->getTimestamp());
+		return ($this->now->getTimestamp() - ($this->getDate() ? $this->getDate()->getTimestamp() : 0));
+	}
+
+	private function getFormatedBuyDate($format) {
+		return ($this->getBuyDate() ? $this->getBuyDate()->format($format) : "n/a");
+	}
+
+	private function isBoughtToday(){
+		return ($this->getFormatedBuyDate("d/m/y") == $this->now->format("d/m/y"));
 	}
 
 	public function isDataFromToday() {
-		return ($this->getDate()->format('d') == $this->now->format('d'));
+		return ($this->getFormatedDate("d/m/y") == $this->now->format("d/m/y"));
 	}
 }

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 class ComdirectDepot{
 	const COMDIRECT_FRIENDS_URL = "https://www.comdirect.de/inf/musterdepot/pmd/freunde.html?SORT=PROFIT_LOSS_POTENTIAL_CURRENCY_PORTFOLIO&SORTDIR=ASCENDING&portfolio_key=";
@@ -20,6 +20,11 @@ class ComdirectDepot{
 	private $loadingTime = 0;
 	private $differenceAbsoluteForToday = null;
 	private $differenceAbsoluteStockValueForToday = null;
+
+	// sum of lost of all stocks in minus
+	private $totalLost = null;
+	// sum of gains of all stocks in plus
+	private $totalProfit = null;
 
 	public function __construct($depotKey) {
 		$this->startTime = microtime(true); 
@@ -43,12 +48,28 @@ class ComdirectDepot{
 		return self::COMDIRECT_FRIENDS_URL . $this->depotKey;
 	}
 
+	public function getDepotKey() {
+		return $this->depotKey;
+	}
+
 	public function getStockCount() {
 		return count($this->stocks);
 	}
 
 	public function getStocks() {
 		return $this->stocks;
+	}
+
+	public function getStocksWithCount() {
+		$stocksWithCount = [];
+
+		foreach ($this->stocks as $i => $stock) {
+			if ($stock->getCount() > 0) {
+				$stocksWithCount[] = $stock;
+			}
+		}
+		
+		return $stocksWithCount;
 	}
 
 	public function setStocks($stocks) {
@@ -118,8 +139,39 @@ class ComdirectDepot{
 		if ($this->differenceAbsoluteForToday == 0) {
 			return 0;
 		} else {
-			return $this->differenceAbsoluteForToday / ($this->differenceAbsoluteStockValueForToday - $this->differenceAbsoluteForToday) * 100;
+			return $this->differenceAbsoluteForToday / $this->totalValue * 100;
 		}	
+	}
+
+
+	public function getTotalProfit() {
+		$this->calculateTotalLostAndProfit();
+		return $this->totalProfit;
+	}
+
+	public function getTotalLost() {
+		$this->calculateTotalLostAndProfit();
+		return $this->totalLost;
+	}
+
+	private function calculateTotalLostAndProfit() {
+		if ($this->totalLost !== null 
+			&& $this->totalProfit !== null) {
+			return;
+		}
+
+		$this->totalLost = 0;
+		$this->totalProfit = 0;
+		foreach ($this->stocks as $stock) {
+			$change = $stock->getTotalDifferenceAbsolute();
+			if ($change < 0) {
+				$this->totalLost += $change;
+			} else {
+				$this->totalProfit += $change;
+			}
+		}
+		$this->totalProfit = round($this->totalProfit, 2);
+		$this->totalLost = round($this->totalLost, 2);
 	}
 
 	public function getCurrency() {

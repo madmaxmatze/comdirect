@@ -1,39 +1,55 @@
-
-
 /* copied: http://www.irishstu.com/stublog/2011/12/13/tables-responsive-design-part-2-nchilds/ */
-html, body {margin:0; padding: 0;}
+html {
+    font-family: Arial, Sans-Serif;
+    margin:0;
+    padding: 3px;
+}
+body {
+    margin:0;
+    padding: 0;
+}
 
 .mmmdepot {
-    border-collapse:collapse;
-    font-family:Arial, Sans-Serif;
     font-size:12px;
+    border-collapse:collapse;
     width: 100%;
 }
     
 .mmmdepot th {
+    text-align: right;
     padding:1px;
     border-bottom: 1px solid #aaa;
 }
 .mmmdepot .footer th {
-    text-align: right;
     border-bottom: none;
     border-top: 1px solid #aaa;
 }
 
+.menu {
+    position: absolute;
+    padding: 0 25px 25px 5px;
+    z-index: 100;
+    font-size: 18pt;
+    line-height: 10pt;
+}
+.menu-tooltip .qtip-content {
+    font-size: 10pt;
+    line-height: 12pt;
+}
+
+
 .mmmdepot td {
-    border-collapse:collapse;
-    padding:1px 3px;
-    text-align:right;
-    overflow:hidden; 
-    position: relative;
+    border-collapse: collapse;
+    padding: 1px 3px;
+    text-align: right;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
-.neg    {
-    color:red;
-}
-
-.pos    {
-    color:green;
+.mmmdepot .stockname {
+    cursor: pointer;  
+    user-select: none;
+    text-align: left;
 }
 
 .mmmdepot td.stockname a {
@@ -43,76 +59,183 @@ html, body {margin:0; padding: 0;}
     height: 1em;
     overflow:hidden; 
 }
-.finanzNachrichtenLink {
-    border: none !important;
+
+
+.mmmdepot tbody tr:hover td {
+    background-color: #dcdefd !important;
 }
-.mmmdepot td .finanzNachrichtenLink {background: url('https://fns1.de/g/favicon.ico') center center no-repeat;}
 
-.mmmdepot tbody tr.even:hover,
-.mmmdepot tbody tr.odd:hover {background-color: #dcdefd !important;}
+.mmmdepot tbody tr.odd {background-color: #EEE;}
 
-.mmmdepot tr.odd {background-color: #EEE;}
+.mmmdepot tbody tr.even > .sortcolumn {background-color: #F4F4F4;}
+.mmmdepot tbody tr.odd > .sortcolumn,
+.mmmdepot thead tr > th.sortcolumn {background-color: #DDD;}
 
 .mmmdepot td a, .mmmdepot td a:visited, .mmmdepot th a, .mmmdepot th a:visited {text-decoration: none; color: #222;}
 .mmmdepot td a:hover, .mmmdepot th a:hover {text-decoration: underline; color: blue;}
 
-.guv, .stockcicle {
-    margin-top: 10px;
-    width: 600px;
-    float: left;    
-}   
-.guv img,
-.stockcicle img {
-    width: 100%;    
-}
+.imgwrapper {
+    margin: 5px;
+    display: block;
+    width: 800px;
+/*    float: left;    */
+}  
 
-tr > *:nth-child(2)
-, tr > *:nth-child(6)
-, tr > *:nth-child(9)
- {
+.imgwrapper img {
+    width: 100%;    
+} 
+
+
+/*
+td.stockiterator - stockiterator
+td.stockname - stockname
+td.stockdate - stockdate
+td.stockmarket - stockmarket
+td.stockbuyprice - stockbuyprice
+td.stockcount - stockcount
+td.totalbuyprice - totalbuyprice
+td.stockprice - stockprice
+td.stockpricediff - stockpricediff
+td.stockpricediffabs - stockpricediffabs
+td.stocktotaldiff - stocktotaldiff
+td.stocktotaldiffabs - stocktotaldiffabs
+*/
+
+tr > td.stockname
+, tr > td.stockdate
+, tr > td.stockprice
+{
     border-left: 1px solid #aaa;
 }
-tr > *:nth-child(1)
-, tr > *:nth-child(5)
-, tr > *:nth-child(8)
- {
+tr > td.stockiterator
+, tr > td.stockname
+, tr > td.totalbuyprice
+, tr > td.stockpricediffabs
+{
     border-right: 1px solid #aaa;
 }
 
-@media only screen and (max-width: 600px) {
-    tr th:nth-child(4), tr td:nth-child(4)
-    {
-        display:none; visibility:hidden;
-    }
-    .guv, .stockcicle {
-        width: 100%;
+td.isDataLive span {
+    font-weight: bold;
+}
+
+td.isDataOld span {
+    opacity: 0.7;
+                /*
+    text-decoration: line-through; 
+    text-decoration-style: dashed; 
+    text-decoration-color: gray;
+    */
+}
+td.isDataFromYesterday span {
+    opacity: 0.3;
+    /*
+    text-decoration: line-through; 
+    text-decoration-style: solid; 
+    text-decoration-color: black;
+    */
+}
+
+th.header {
+    cursor: ns-resize;
+}
+
+th.headerSortDown {
+    cursor: n-resize;
+}
+
+th.headerSortUp {
+    cursor: s-resize;
+}
+
+@media only screen and (max-width: 1000px) {
+    .imgwrapper {
+        width: 100% !important;
         float: none;
     }
 }
 
-@media only screen and (max-width: 550px) {
-    tr th:nth-child(2), tr td:nth-child(2)
-    , tr th:nth-child(3), tr td:nth-child(3)
-    , tr th:nth-child(5), tr td:nth-child(5)
+@media only screen and (max-width: 700px) {
+    .mmmdepot tr > *:nth-child(1)
+    ,.mmmdepot tr > *:nth-child(4)
     {
         display:none; visibility:hidden;
     }
-    .guv, .stockcicle {
-        width: 100%;
-        float: none;
+
+    .mmmdepot th.stockname {
+        padding-left: 25px;
+    }       
+}
+
+@media only screen and (max-width: 600px) {
+    .mmmdepot tr > *:nth-child(3)
+    ,.mmmdepot tr > *:nth-child(6)
+    {
+        display:none; visibility:hidden;
+    }
+    .google-visualization-tooltip {
+       font-size: 9pt !important;
+    }
+
+    .imgwrapper img {
+        width: 100%;    
+    }
+}
+
+@media only screen and (max-width: 500px) {
+    .mmmdepot tr > *:nth-child(5)
+    ,.mmmdepot tr > *:nth-child(7)
+    {
+        display:none; visibility:hidden;
     }
 }
 
 @media only screen and (max-width: 400px) {
-    tr th:nth-child(8), tr td:nth-child(8)
-    {
+    .mmmdepot tr > *:nth-child(10) {
         display:none; visibility:hidden;
-    }   
+    }
+    .google-visualization-tooltip {
+       font-size: 7pt !important;
+    }
 }
 
 @media only screen and (max-width: 300px) {
-    tr th:nth-child(9), tr td:nth-child(9)
-    {
+   .mmmdepot tr > *:nth-child(11) {
         display:none; visibility:hidden;
     }
 }
+
+tr.watchlist td.stockdate
+,tr.watchlist td.stockbuyprice
+,tr.watchlist td.stockcount
+,tr.watchlist td.totalbuyprice
+,tr.watchlist td.stockpricediffabs
+,tr.watchlist td.stocktotalvalue
+,tr.watchlist td.stocktotaldiff
+,tr.watchlist td.stocktotaldiffabs
+{
+    font-size: 0;
+}
+
+
+/* https://stackoverflow.com/questions/35862715/create-html-table-with-increment-number-of-column */
+table {
+    counter-reset: rowNumber;
+}
+tr:not(.watchlist) td.stockiterator::before {  
+    counter-increment: rowNumber;
+    content: counter(rowNumber);
+}
+
+
+/* make white */
+.qtip-default {
+    border: 1px solid gray !important;
+    background-color: white !important;
+}
+
+.qtip-titlebar {
+    border-bottom: 1px solid gray !important;
+    background-color: white !important;
+}
+
