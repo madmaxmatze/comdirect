@@ -229,11 +229,9 @@ class ComdirectDepotLoader{
 
 		$stock->setWKN($data[3]);
 		$stock->setType($data[4]);
-		if ($stock->getType() == "Währung") {
+		$standardTypes = array("Währung", "Rohstoffe", "Edelmetalle");
+		if (in_array($stock->getType(), $standardTypes)) {
 			$stock->setName("*" . $stock->getName());
-		}
-		if ($stock->getType() == "Edelmetalle") {
-			// $stock->setName("CURRENCY " . $stock->getName());
 		}
 
 		$stock->setCurrency($data[5]);
@@ -291,6 +289,13 @@ class ComdirectDepotLoader{
 		$data = array_map(array($this, "removeHtml"), $data);
 		$data = array_filter($data, array($this, "arrayFilterNotEmpty"));
 		$data = array_values($data);
+
+		// change from "Fond" to "ETF", if name contains "ETF"
+		if (preg_match("/\ ETF\ /i", $data[2])) {
+			$data[4] = "ETF";
+		}
+		$data[4] = str_replace(["Rohstoffe", "Edelmetalle", "Währung", "Zertifikat", "Aktie"], ["Commodity", "Commodity", "Currency", "Certificat", "Stock"], $data[4]);
+
 		return $data;
 	}
 

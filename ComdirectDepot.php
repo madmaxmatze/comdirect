@@ -196,7 +196,7 @@ class ComdirectDepot{
 
 	public function isTradingDay() {
 		$now = new DateTime('now');
-		return ($this->getNewestStockTimestamp()->format('d') == $now->format('d'));
+		return ($this->getNewestStockTimestamp()->format("d/m/y") == $now->format("d/m/y"));
 	}
 
 	public function loadingFinished() {

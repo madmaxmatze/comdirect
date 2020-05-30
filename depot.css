@@ -26,11 +26,14 @@ body {
 }
 
 .menu {
+    top: 2px;
+    left: 2px;
     position: absolute;
     padding: 0 25px 25px 5px;
     z-index: 100;
     font-size: 18pt;
     line-height: 10pt;
+    cursor: pointer;
 }
 .menu-tooltip .qtip-content {
     font-size: 10pt;
@@ -50,9 +53,17 @@ body {
     cursor: pointer;  
     user-select: none;
     text-align: left;
+    text-overflow: ellipsis;
+    white-space: normal;
 }
 
-.mmmdepot td.stockname a {
+.mmmdepot th.stockname * {
+    display: block;
+    height: 15px;
+    overflow: hidden;
+}
+
+.mmmdepot .stockname a {
     display: block; 
     border: none !important;
     text-align: left; 
@@ -86,23 +97,8 @@ body {
 } 
 
 
-/*
-td.stockiterator - stockiterator
-td.stockname - stockname
-td.stockdate - stockdate
-td.stockmarket - stockmarket
-td.stockbuyprice - stockbuyprice
-td.stockcount - stockcount
-td.totalbuyprice - totalbuyprice
-td.stockprice - stockprice
-td.stockpricediff - stockpricediff
-td.stockpricediffabs - stockpricediffabs
-td.stocktotaldiff - stocktotaldiff
-td.stocktotaldiffabs - stocktotaldiffabs
-*/
-
 tr > td.stockname
-, tr > td.stockdate
+, tr > td.stockbuydate
 , tr > td.stockprice
 {
     border-left: 1px solid #aaa;
@@ -156,8 +152,9 @@ th.headerSortUp {
 }
 
 @media only screen and (max-width: 700px) {
-    .mmmdepot tr > *:nth-child(1)
-    ,.mmmdepot tr > *:nth-child(4)
+    .mmmdepot tr .stockiterator
+    ,.mmmdepot tr .stocktype
+    ,.mmmdepot tr .stockmarket
     {
         display:none; visibility:hidden;
     }
@@ -168,8 +165,8 @@ th.headerSortUp {
 }
 
 @media only screen and (max-width: 600px) {
-    .mmmdepot tr > *:nth-child(3)
-    ,.mmmdepot tr > *:nth-child(6)
+    .mmmdepot tr .stockbuydate
+    ,.mmmdepot tr .stockbuycount
     {
         display:none; visibility:hidden;
     }
@@ -183,31 +180,28 @@ th.headerSortUp {
 }
 
 @media only screen and (max-width: 500px) {
-    .mmmdepot tr > *:nth-child(5)
-    ,.mmmdepot tr > *:nth-child(7)
+    .mmmdepot tr .stockbuyprice
+    ,.mmmdepot tr .totalbuyprice
     {
         display:none; visibility:hidden;
     }
 }
 
 @media only screen and (max-width: 400px) {
-    .mmmdepot tr > *:nth-child(10) {
-        display:none; visibility:hidden;
-    }
     .google-visualization-tooltip {
        font-size: 7pt !important;
     }
 }
 
 @media only screen and (max-width: 300px) {
-   .mmmdepot tr > *:nth-child(11) {
+   .mmmdepot tr .stocktotalvalue {
         display:none; visibility:hidden;
     }
 }
 
-tr.watchlist td.stockdate
+tr.watchlist td.stockbuydate
 ,tr.watchlist td.stockbuyprice
-,tr.watchlist td.stockcount
+,tr.watchlist td.stockbuycount
 ,tr.watchlist td.totalbuyprice
 ,tr.watchlist td.stockpricediffabs
 ,tr.watchlist td.stocktotalvalue

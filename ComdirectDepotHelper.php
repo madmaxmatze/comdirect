@@ -43,7 +43,13 @@ class ComdirectDepotHelper {
 		$totalValue = 0;
 
 		foreach ($stocks as $i => $stock) {
-			$html .= "<span style='color: white; font-size: 10pt; white-space: nowrap; background-color: #" . $colors[$i] . "'> " . $stock->getName() . " </span> &#160;";
+			$c = "white";
+			$bc = $colors[$i];
+			if (!$i) { // MSCI World
+				$c = $bc;
+				$bc = transparent;
+			}
+			$html .= "<span style='color: $c; font-size: 10pt; white-space: nowrap; background-color: #$bc'> " . $stock->getName() . " </span> &#160;";
 			$ids[] = $stock->getId();
 			$totalValue += $stock->getTotalPrice();
 		}

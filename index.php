@@ -28,28 +28,29 @@ foreach ($portfolioKeys as $portfolioKey) {
 		$depot = $depotLoader->load($portfolioKey);
 		// $cache->put($depotCacheKey, $depot, 60);
 	}
-
+	
 	if ($depot && $depot->isValid()) {  			
-		$out .= "<div class='menu'>≡</div>";
 		$out .= "<table class='mmmdepot tablesorter focus-highlight' data-portfoliokey='" . $portfolioKeyParam . "' data-portfoliotitle='" . $depot->getTitle() . "'>" .
 					"<thead>" .
 					"<tr>".
-						"<th></th>".
+						"<th class='stockiterator'></th>".
 						// colspan=2 because of finanznachrichten link
-						"<th class='alignleft stockname'>" . $depot->getTitle() . "</th>" .
-						"<th>Kaufdatum</th>".
-						"<th>Börse</th>".
-						"<th>Kaufkurs</th>".
-						"<th>Anzahl</th>".
-						"<th>Kaufwert</th>".
-				
-						"<th>Kurs</th>".
-						"<th>%</th>".
-						"<th>Abs</th>".
+						"<th class='alignleft stockname'><div>" . $depot->getTitle() . "</div></th>" .
+						"<th class='stocktype'>Type</th>".
+						"<th class='stockmarket'>Market</th>".
 						
-						"<th>Wert</th>".
-						"<th>%</th>".
-						"<th class='sortcolumn headerSortUp'>Abs</th>".
+						"<th class='stockbuydate'>Kaufdatum</th>".
+						"<th class='stockbuycount'>Anzahl</th>".
+						"<th class='stockbuyprice'>Kaufkurs</th>".
+						"<th class='totalbuyprice'>Kaufwert</th>".
+				
+						"<th class='stockprice'>Kurs</th>".
+						"<th class='stockpricediff'>%</th>".
+						"<th class='stockpriceabs'>Abs</th>".
+						
+						"<th class='stocktotalvalue'>Wert</th>".
+						"<th class='stocktotaldiff'>%</th>".
+						"<th class='stocktotaldiffabs sortcolumn headerSortUp'>Abs</th>".
 					"</tr>" .
 					"</thead>" .
 				"<tbody>";
@@ -67,7 +68,6 @@ foreach ($portfolioKeys as $portfolioKey) {
 					$stockClass = "isDataOld";
 				}
 				
-				$isFinanznachrichten = ($stock->getType() == "Aktie"); 
 				$out .= "<tr
 							data-wkn='" . $stock->getWkn() . "'
 							data-symbol='" . $stock->getSymbol() . "'
@@ -82,16 +82,19 @@ foreach ($portfolioKeys as $portfolioKey) {
 							"</td>" .
 							
 							// Datum
-							"<td class='stockdate'>" . ($stock->getCount() ? $stock->getBuyDate()->format("d/m/y") : "") . "</td>".
-						
+							"<td class='stocktype'>" . $stock->getType() . "</td>".
+
 							// Börse
 							"<td class='stockmarket'>" . $stock->getMarket() . "</td>".
 
-							// Kaufpreis
-							"<td class='stockbuyprice'>" . ($stock->getCount() ? number_format($stock->getBuyPrice(), 2, ',', '.') . "€" : "") . "</td>".
 
-							"<td class='stockcount'>" . ($stock->getCount() ? ceil($stock->getCount()) : "") . "</td>".
-							
+							// Kaufpreis
+							"<td class='stockbuydate'>" . ($stock->getCount() ? $stock->getBuyDate()->format("y-m-d") : "") . "</td>".
+
+							"<td class='stockbuycount'>" . ($stock->getCount() ? ceil($stock->getCount()) : "") . "</td>".
+												
+							"<td class='stockbuyprice'>" . ($stock->getCount() ? number_format($stock->getBuyPrice(), 2, ',', '.') . "€" : "") . "</td>".
+	
 							// Kaufgesamtwert
 							"<td class='totalbuyprice'>" . ($stock->getCount() ? number_format($stock->getTotalBuyPrice(), 0, ',', '.') . "€" : "") . "</td>".
 
@@ -121,40 +124,41 @@ foreach ($portfolioKeys as $portfolioKey) {
 		$out .= "</tbody>" . 
 				"<tfoot>" .
 					"<tr class='footer'>" . 
-						"<th></th>" .
-						"<th>" .
-							($depot->getNewestStockTimestamp() ? $depot->getNewestStockTimestamp()->format("y/m/d - H:i") : "") .
+						"<th class='stockiterator'></th>" .
+						"<th class='stockname'>" .
+							($depot->getNewestStockTimestamp() ? $depot->getNewestStockTimestamp()->format(($depot->isTradingDay() ? "" : "y-m-d - ") . "H:i") : "") .
 					  	"</th>".
 						
-						"<th></th>" .
-						"<th></th>" .
-						"<th></th>" .
-						"<th></th>" . 
-						"<th>" . number_format($depot->getBuyTotalValue(), 0, ',', '.') . $currencySymbol . "</th>" .
+						"<th class='stocktype'></th>".
+						"<th class='stockmarket'></th>" .
 						
-						"<th></th>" .
-
+						"<th class='stockbuydate'></th>" .
+						"<th class='stockbuycount'></th>" . 
+						"<th class='stockbuyprice'></th>" .
+						"<th class='totalbuyprice'>" . number_format($depot->getBuyTotalValue(), 0, ',', '.') . $currencySymbol . "</th>" .
+						
+						"<th class='stockprice'></th>" .
 						($depot->isTradingDay() ?
-							"<th style='color: " . $depotHelper->getColorForNumber($depot->getDifferencePercentageForToday()) . "' title='" . $depot->getDifferencePercentageForToday() . "'>" . 
+							"<th class='stockpricediff' style='color: " . $depotHelper->getColorForNumber($depot->getDifferencePercentageForToday()) . "' title='" . $depot->getDifferencePercentageForToday() . "'>" . 
 								number_format($depot->getDifferencePercentageForToday(), 2, ',', '.') . "%" .
 							"</th>".
-							"<th style='color: " . $depotHelper->getColorForNumber($depot->getDifferenceAbsoluteForToday()) . "'>" .
+							"<th class='stockpricediffabs' style='color: " . $depotHelper->getColorForNumber($depot->getDifferenceAbsoluteForToday()) . "'>" .
 								number_format($depot->getDifferenceAbsoluteForToday() , 0, ',', '.') . $currencySymbol . 
 							"</th>"
 							:
-							"<th></th>" .
-							"<th></th>"
+							"<th class='stockpricediff'></th>" .
+							"<th class='stockpricediffabs'></th>"
 						) .
 
-						"<th>" . 
+						"<th class='stocktotalvalue'>" . 
 							number_format($depot->getTotalValue(), 0, ',', '.') . $currencySymbol . 
 						"</th>" . 
 				
-						"<th style='color: " . $depotHelper->getColorForNumber($depot->getDiffererencePercentage()) . "'>".
+						"<th class='stocktotaldiff' style='color: " . $depotHelper->getColorForNumber($depot->getDiffererencePercentage()) . "'>".
 							number_format($depot->getDiffererencePercentage(), 1, ',', '.') . "%" .
 						"</th>".
 						
-						"<th style='color: " . $depotHelper->getColorForNumber($depot->getDiffererenceAbsolute()) . "'>" .
+						"<th class='stocktotaldiffabs' style='color: " . $depotHelper->getColorForNumber($depot->getDiffererenceAbsolute()) . "'>" .
 							number_format($depot->getDiffererenceAbsolute(), 0, ',', '.') . $currencySymbol .
 						"</th>".
 					"</tr>" .
