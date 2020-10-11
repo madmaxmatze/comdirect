@@ -1,19 +1,47 @@
 <?php
 
 require "vendor/FileCache.php";
+include_once "ComdirectDepot.php";
+include_once "ComdirectStock.php";
+// include_once "ComdirectDepotHelper.php";
 
 class ComdirectDepotLoader{
+	const COMDIRECT_FRIENDS_URL = "https://www.comdirect.de/inf/musterdepot/pmd/freunde.html?SORT=PROFIT_LOSS_POTENTIAL_CURRENCY_PORTFOLIO&SORTDIR=ASCENDING&portfolio_key=";
+
 	private $cache;
 
 	public function __construct($cache) {
 		$this->cache = $cache;
 	}
 
+	public function loadCachedWithoutSaving($depotKey) {
+		return $this->loadportfolio($depotKey, true);
+	}
 	public function load($depotKey) {
+		return $this->loadportfolio($depotKey, false);
+	}
+
+	private function loadportfolio($depotKey, $cached = true) {
+		$shareDepotKey = null;
+
+		// load with substring of portfolio key
+		if (substr($depotKey, 0, 1) === "s") {
+			$shareDepotKey = $depotKey;
+			$cacheKeys = $this->cache->getKeys("/^history\_[0-9]+/");
+			$keyPart = substr($depotKey, 1);
+
+			foreach ($cacheKeys as $cacheKey) {
+				if (strpos($cacheKey, $keyPart)) {
+					$depotKey = preg_replace("/^history\_/", "", $cacheKey);
+				}
+			}
+		}
+		
 		$depot = new ComdirectDepot($depotKey);
-	
+
 		try {
-			$depotHtml = $this->getContentFromUrl($depot->getUrl());
+			$url = self::COMDIRECT_FRIENDS_URL . $depotKey;
+			$depotHtml = $this->getContentFromUrl($url, 60);
 
 			if ($depotHtml !== null){
 				$depotHtml = $this->replaceStringsInContent($depotHtml);
@@ -21,14 +49,20 @@ class ComdirectDepotLoader{
 				$currentTotalValue = $this->getCurrentTotalValue($depotHtml);
 				if ($currentTotalValue) {
 					$depot->setTitle($this->getTitle($depotHtml));
-					$depot->setTotalValue($currentTotalValue);
-					$depot->setBuyTotalValue($this->getBuyTotalValue($depotHtml));
+				//	$depot->setTotalValue($currentTotalValue);
+				// 	$depot->setBuyTotalValue($this->getBuyTotalValue($depotHtml));
 					$depot->setStocks($this->getStocks($depotHtml));
-					$depot->setDiffererenceAbsolute($this->getDiffererenceAbsolute($depotHtml));
+					
 					$depot->setDifferenceAbsoluteComparedToYesterday($this->getDifferenceAbsoluteComparedToYesterday($depotHtml));
 					$depot->setCurrency($this->getCurrency($depotHtml));
 	
-					$this->saveDepotTotals($depot);
+					if (!$shareDepotKey && !$cached && $depot->isValid()) {
+						$this->saveDepotTotals($depot);
+					}
+				
+					if ($shareDepotKey) {
+						$depot->makeSharable($shareDepotKey);
+					}
 				}
 			}
 		} catch (Exception $e) {
@@ -90,16 +124,6 @@ class ComdirectDepotLoader{
 		return $currency;
 	}
 
-
-	private function getDiffererenceAbsolute($depotHtml) {
-		$totalDifference = 0;
-		if (preg_match('/Diff\. zum Kauf\:.*?\<b.*?\>\s*(.*?)\s*\<\/b\>/s', $depotHtml, $match)) {
-			$totalDifference = $this->toNumber($match[1]);
-		}
-	
-		return $totalDifference;
-	}
-
 	private function getDifferenceAbsoluteComparedToYesterday($depotHtml) {
 		$totalDifferenceToYesterday = 0;
 		if (preg_match('/Diff\. zum Vortag\:.*?\<b.*?\>\s*(.*?)\s*\<\/b\>/s', $depotHtml, $match)) {
@@ -126,7 +150,7 @@ class ComdirectDepotLoader{
 		}
 
 		usort($stocks, array("ComdirectStock", "compareByDifferenceAbsolute"));
-
+	
 		return $stocks;
 	}
 
@@ -147,12 +171,15 @@ class ComdirectDepotLoader{
 	}
 
 	private function getAdditionalAttributes($stock) {
-		$additionalAttrKey = "stock_additional_" . $stock->getWkn();
+		$additionalAttrKey = "stock_info_" . $stock->getId();
 		$additionalAttr = $this->cache->get($additionalAttrKey);
 		if (!$additionalAttr) {
-			$additionalAttr = [];
+			$additionalAttr = [
+				"comdirect_id" => $stock->getId(),
+				"wkn" => $stock->getWkn(),
+				"name" => $stock->getName(),
+			];
 
-			// $stockHtml = $this->getContentFromUrl($stock->getUrl());
 			/*
 			if ($stockHtml) {
 				if (preg_match('/' .
@@ -168,17 +195,17 @@ class ComdirectDepotLoader{
 			}
 			*/
 
-			$stockHtml = $this->getContentFromUrl("http://m.ariva.de/search/search.m?searchname=" . $stock->getWkn(), strtotime('1 days'));
+			$stockHtml = $this->getContentFromUrl("https://www.comdirect.de/inf/aktien/detail/uebersicht.html?ID_NOTATION=" . $stock->getId());
 			if ($stockHtml) {
 				if (preg_match('/' .
 						'\<td.*?\>Symbol\<\/td\>.*?' . 
-						'\<td.*?\>(.*?)\<\/td\>' . 
+						'\<td.*?\>\-*(\w*)\<\/td\>' . 
 					'/s', $stockHtml, $match)) {
 					$additionalAttr["symbol"] = trim($match[1]);
 				}
 				if (preg_match('/' .
 						'\<td.*?\>ISIN\<\/td\>.*?' . 
-						'\<td.*?\>(.*?)\<\/td\>' . 
+						'\<td.*?\>\-*(.*?)\<\/td\>' . 
 					'/s', $stockHtml, $match)) {
 					$additionalAttr["isin"] = trim($match[1]);
 				}
@@ -197,7 +224,7 @@ class ComdirectDepotLoader{
 				}
 			}
 		
-			$this->cache->put($additionalAttrKey, $additionalAttr, 86400 * 30);
+			$this->cache->put($additionalAttrKey, $additionalAttr);
 		}
 		
 		
@@ -205,14 +232,14 @@ class ComdirectDepotLoader{
 	}
 
 	private function removeHtml($html) {
-		$html = trim($html);
+		$html = trim($html);	
 		$html = strip_tags($html);
 		return $html;
 	}
 
 	private function arrayFilterNotEmpty($content) {
 		$content = trim($content);
-		return (!in_array($content, array("", "Notizen", "Realtime")));
+		return (!in_array($content, array("", "&nbsp;", "Realtime")));
 	}
 
 	private function mapHtmlToStock($html) {
@@ -220,35 +247,39 @@ class ComdirectDepotLoader{
 		// var_export($data);
 
 		$stock = new ComdirectStock();
-
 		$stock->setCount($this->toNumber($data[0]));
 		
 		$stock->setUrl($data[1]);
-		$stock->setId($this->getIdFromUrl($data[1]));
+		$id = $this->getIdFromUrl($data[1]);
+		$stock->setId($id);
 		$stock->setName($this->parseStockName($data[2]));
 
-		$stock->setWKN($data[3]);
-		$stock->setType($data[4]);
-		$standardTypes = array("Währung", "Rohstoffe", "Edelmetalle");
+		$stock->setNote($data[3]);
+
+		$stock->setWKN($data[4]);
+		$stock->setType($data[5]);
+		$standardTypes = array("Currency", "Commodity", "Index");
 		if (in_array($stock->getType(), $standardTypes)) {
 			$stock->setName("*" . $stock->getName());
 		}
 
-		$stock->setCurrency($data[5]);
+		if ($stock->getType() != "Index") {
+			$stock->setCurrency($data[6]);
+		}
 
-		$stock->setPrice($this->toNumber($data[6]));
-		$stock->setDifferenceAbsolutePerStock($this->toNumber($data[7]));
-		$stock->setDifferencePercentage($this->toNumber($data[8]));
+		$stock->setPrice($this->toNumber($data[7]));
+		$stock->setDifferenceAbsolutePerStock($this->toNumber($data[8]));
+		$stock->setDifferencePercentage($this->toNumber($data[9]));
 
-		$stock->setTotalPrice($this->toNumber($data[9]));
-		$stock->setTotalDifferenceAbsolute($this->toNumber($data[10]));
-		$stock->setTotalDifferencePercentage($this->toNumber($data[11]));
-		$stock->setDate(DateTime::createFromFormat('d.m.y H:i:s', $data[12] . " " . $data[13]));
+		$stock->setTotalValue($this->toNumber($data[10]));
+		// $stock->setTotalDifferenceAbsolute($this->toNumber($data[10]));
+		// $stock->setTotalDifferencePercentage($this->toNumber($data[11]));
+		$stock->setDate(DateTime::createFromFormat('d.m.y H:i:s', $data[13] . " " . $data[14], new DateTimeZone('Europe/Berlin')));
 
-		$stock->setMarket($data[14]);
-		$stock->setBuyPrice($this->toNumber($data[15]));
-		$stock->setBuyDate(DateTime::createFromFormat('d.m.y', $data[16]));
-		$stock->setTotalBuyPrice($this->toNumber($data[17]));
+		$stock->setMarket($data[15]);
+		$stock->setBuyPrice($this->toNumber($data[16]));
+		$stock->setBuyDate(DateTime::createFromFormat('d.m.y', $data[17], new DateTimeZone('Europe/Berlin')));
+		$stock->setTotalBuyValue($this->toNumber($data[18]));
 
 		// $output[$i]['DIFFABSTODAY'] = $output[$i]['COUNT'] * $output[$i]['DIFFABS'];
 		
@@ -268,39 +299,53 @@ class ComdirectDepotLoader{
 		
 		// make first letter of all words (text with leading space) big if only in big or only in small letters - so don't do with eg: ProSiebenMedia AG
 		$name = ucwords(strtolower(trim($name)));
+		$name = htmlspecialchars_decode($name);
+		
+		$name = preg_replace("/\ Us\ /i", " US ", $name);
+		$name = preg_replace("/S\&p/i", "S&P", $name);
 
-		$name = preg_replace("/Amundi\ (ETF)*(Index Solutions)*/i", "ETF", $name);
-		$name = preg_replace("/(.*) Indikation/", "*$1", $name);
+		$name = preg_replace("/Amundi\ (ETF)*(Index)*( )*(Solutions)*/i", "ETF ", $name);
+		$name = preg_replace("/(.*) Indikation/", "$1", $name);
 		$name = preg_replace("/Euro\ \/\ Euro/", "Euro", $name);
-
+	
 		return $name;
 	}
 
 	private function getIdFromUrl($url){
 		$id = null;
-		if (preg_match('/ID\_NOTATION\=(.*?)\&amp\;NAME\_PORTFOLIO/s', $url, $match)) {
+		if (preg_match('/ID\_NOTATION\=(.*?)\&amp\;/s', $url, $match)) {
 			$id = $match[1];
 		}
 		return $id;
 	}
 
 	private function getCreateCleanedUpArray($html){
+		// Find Notiz before anything else
+		$notiz = "";
+		if (preg_match('/\<div\ class\=\"tooltipLayerContent\"\>(.*?)\<\/div\>/is', $html, $matches)) {
+			$notiz = trim($matches[1]);
+			$html = str_replace($matches[0], "", $html);
+		}
+		
 		$data = explode("\n", $html);
+
 		$data = array_map(array($this, "removeHtml"), $data);
 		$data = array_filter($data, array($this, "arrayFilterNotEmpty"));
 		$data = array_values($data);
 
+		$data[3] = $notiz;
+
 		// change from "Fond" to "ETF", if name contains "ETF"
 		if (preg_match("/\ ETF\ /i", $data[2])) {
-			$data[4] = "ETF";
+			$data[5] = "ETF";
 		}
-		$data[4] = str_replace(["Rohstoffe", "Edelmetalle", "Währung", "Zertifikat", "Aktie"], ["Commodity", "Commodity", "Currency", "Certificat", "Stock"], $data[4]);
+		$data[5] = str_replace(["Rohstoffe", "Edelmetalle", "Währung", "Zertifikat", "Aktie"], ["Commodity", "Commodity", "Currency", "Certificat", "Stock"], $data[5]);
 
 		return $data;
 	}
 
 	private function getContentFromUrl ($url, $maxCacheAgeSeconds = 0) {
-		$cacheKey = "url_content_" . $url;
+		$cacheKey = "url_content_" . md5($url);
 
 		$content = $this->cache->get($cacheKey);
 		if (!$content) {
@@ -338,14 +383,10 @@ class ComdirectDepotLoader{
 		$number = preg_replace('/\D+$/', '', $number);
 		
 		// first transform german number format to english
-		if (substr_count($number, '.') <= 1) {
-			$number = str_replace ('.', '', $number);
-		}
+		$number = str_replace ('.', '', $number);
 		$number = strtr($number , array(','=>'.', '%'=>''));
-		// if (strval($number) == strval(floatval ($number))) {
-			$number = floatval ($number);
-		// }
-
+		$number = floatval ($number);
+	
 		return $number;
 	}
 
@@ -358,13 +399,15 @@ class ComdirectDepotLoader{
 		}
 		$midnightString = $depot->getNewestStockTimestamp()->format("Y-m-d") 
 							. "T00:00:00+00:00";
-		
+				
 		$stocks = [];
 		foreach ($depot->getStocksWithCount() as $stock) {
 			$stocks[] = [
 				"id" => $stock->getId(),
-				"name" => $stock->getName(),
+				// "name" => $stock->getName(),
+				"count" => $stock->getCount(),
 				"buyPrice" => $stock->getBuyPrice(),
+				"value" => $stock->getTotalValue(),
 				"price" => $stock->getPrice(),
 			];
 		}
@@ -377,5 +420,9 @@ class ComdirectDepotLoader{
 		];
 
 		$this->cache->put($cacheKey, $history);
+		
+		if (count($history) > 1) {
+			$this->cache->put("save_" . $depot->getNewestStockTimestamp()->format("Y-m-d") . "_" . $cacheKey, $history);
+		}
 	}
 }

@@ -8,18 +8,19 @@ class ComdirectStock{
 	private $isin = "";
 	private $wkn = "";
 	private $symbol = "";
+	private $note = "";
 	private $type = "";
-	private $currency = "EUR";
+	private $currency = "";
 	private $currencySymbol = null;
 	private $url = "";
 	private $price = "";
 	private $differenceAbsolutePerStock = 0;
 	private $differencePercentage = 0;
-	private $totalPrice = 0;
+	private $totalValue = 0;
 	private $totalDifferenceAbsolute = 0;
 	private $market = "";
 	private $buyPrice = 0;
-	private $buyDate = 0;
+	private $buyDate = null;
 	private $date = null;
 	private $now = null;
 
@@ -28,7 +29,7 @@ class ComdirectStock{
 	} 
 
 	static function compareByTotalValue($a, $b) {
-		return ($a->getTotalPrice() > $b->getTotalPrice());
+		return ($a->getTotalValue() > $b->getTotalValue());
 	}
 
 	static function compareByPercentageDifference($a, $b) {
@@ -63,6 +64,7 @@ class ComdirectStock{
 		return $this->count;
 	}
 
+	/*
 	public function setTotalCount($totalCount){
 		$this->totalCount = $totalCount;
 	}
@@ -70,9 +72,10 @@ class ComdirectStock{
 	public function getTotalCount(){
 		return $this->totalCount;
 	}
+	*/
 
-	public function getCountRounded(){
-		return round($this->count * 100) / 100;
+	public function isWatchlist(){
+		return (!$this->buyPrice || !$this->buyDate);
 	}
 
 	public function setName($name) {
@@ -114,6 +117,14 @@ class ComdirectStock{
 	public function getIsin() {
 		return $this->isin;
 	}
+
+	public function setNote($note){
+		$this->note = $note;
+	}
+
+	public function getNote(){
+		return $this->note;
+	}	
 
 	public function setType($type) {
 		$this->type = $type;
@@ -192,28 +203,20 @@ class ComdirectStock{
 		return $this->differencePercentage;
 	}
 
-	public function setTotalPrice($totalPrice) {
-		$this->totalPrice = $totalPrice;
+	public function setTotalValue($totalValue) {
+		$this->totalValue = $totalValue;
 	}
 
-	public function getTotalPrice() {
-		return $this->totalPrice;
-	}
-
-	public function setTotalDifferenceAbsolute($totalDifferenceAbsolute) {
-		$this->totalDifferenceAbsolute = $totalDifferenceAbsolute;
+	public function getTotalValue() {
+		return $this->totalValue;
 	}
 
 	public function getTotalDifferenceAbsolute() {
-		return $this->totalDifferenceAbsolute;
-	}
-
-	public function setTotalDifferencePercentage($totalDifferencePercentage) {
-		$this->totalDifferencePercentage = $totalDifferencePercentage;
+		return $this->totalValue - $this->totalBuyValue;
 	}
 
 	public function getTotalDifferencePercentage() {
-		return $this->totalDifferencePercentage;
+		return ($this->totalBuyValue ? $this->getTotalDifferenceAbsolute() / $this->totalBuyValue * 100 : 0);
 	}
 
 	public function setMarket($market) {
@@ -230,7 +233,7 @@ class ComdirectStock{
 
 	public function getBuyPrice() {
 		return $this->buyPrice;
-	}	
+	}
 
 	public function setBuyDate($buyDate) {
 		$this->buyDate = $buyDate;
@@ -240,12 +243,12 @@ class ComdirectStock{
 		return $this->buyDate;
 	}			
 	
-	public function setTotalBuyPrice($totalBuyPrice) {
-		$this->totalBuyPrice = $totalBuyPrice;
+	public function setTotalBuyValue($totalBuyValue) {
+		$this->totalBuyValue = $totalBuyValue;
 	}
 
-	public function getTotalBuyPrice() {
-		return $this->totalBuyPrice;
+	public function getTotalBuyValue() {
+		return $this->totalBuyValue;
 	}	
 
 	public function setDate($date) {

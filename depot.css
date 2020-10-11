@@ -3,6 +3,7 @@ html {
     font-family: Arial, Sans-Serif;
     margin:0;
     padding: 3px;
+    background: url(https://upload.wikimedia.org/wikipedia/commons/d/de/Ajax-loader.gif) no-repeat center center;
 }
 body {
     margin:0;
@@ -20,6 +21,7 @@ body {
     padding:1px;
     border-bottom: 1px solid #aaa;
 }
+
 .mmmdepot .footer th {
     border-bottom: none;
     border-top: 1px solid #aaa;
@@ -33,13 +35,23 @@ body {
     z-index: 100;
     font-size: 18pt;
     line-height: 10pt;
+}
+.menu:hover
+, .mmmdepot thead th:hover
+, .mmmdepot td a:hover
+, .mmmdepot th a:hover
+{
+    color: blue;
     cursor: pointer;
 }
+
 .menu-tooltip .qtip-content {
     font-size: 10pt;
     line-height: 12pt;
 }
-
+.menu-tooltip .qtip-content p {
+    padding: 3px 0px;
+}
 
 .mmmdepot td {
     border-collapse: collapse;
@@ -49,7 +61,9 @@ body {
     white-space: nowrap;
 }
 
-.mmmdepot .stockname {
+.mmmdepot thead th.stockname
+, .mmmdepot td.stockname
+ {
     cursor: pointer;  
     user-select: none;
     text-align: left;
@@ -72,6 +86,18 @@ body {
 }
 
 
+.mmmdepot .stocknote {
+    text-align: left;
+    position: relative;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+}
+ 
+
+
+
 .mmmdepot tbody tr:hover td {
     background-color: #dcdefd !important;
 }
@@ -83,18 +109,7 @@ body {
 .mmmdepot thead tr > th.sortcolumn {background-color: #DDD;}
 
 .mmmdepot td a, .mmmdepot td a:visited, .mmmdepot th a, .mmmdepot th a:visited {text-decoration: none; color: #222;}
-.mmmdepot td a:hover, .mmmdepot th a:hover {text-decoration: underline; color: blue;}
 
-.imgwrapper {
-    margin: 5px;
-    display: block;
-    width: 800px;
-/*    float: left;    */
-}  
-
-.imgwrapper img {
-    width: 100%;    
-} 
 
 
 tr > td.stockname
@@ -103,28 +118,44 @@ tr > td.stockname
 {
     border-left: 1px solid #aaa;
 }
-tr > td.stockiterator
-, tr > td.stockname
-, tr > td.totalbuyprice
-, tr > td.stockpricediffabs
+tr td.stockiterator
+, tr td.stockname
+, tr td.totalbuyprice
+, tr td.stockpricediff
+, tr td.stockpricediffabs
 {
     border-right: 1px solid #aaa;
 }
 
-td.isDataLive span {
+tr .stockpricediff {
     font-weight: bold;
-}
+} 
 
-td.isDataOld span {
+tr.isDataOld .stockprice,
+tr.isDataOld .stockpricediff,
+tr.isDataOld .stockpricediffabs
+{
     opacity: 0.7;
-                /*
+    font-weight: normal;
+                    /*
     text-decoration: line-through; 
     text-decoration-style: dashed; 
     text-decoration-color: gray;
     */
 }
-td.isDataFromYesterday span {
+/*
+tr.isDataOld .stockpricediff,
+tr.isDataOld .stockprice {
+    opacity: 0.7;
+}
+*/
+
+tr.isDataFromYesterday .stockprice,
+tr.isDataFromYesterday .stockpricediff,
+tr.isDataFromYesterday .stockpricediffabs
+{
     opacity: 0.3;
+    font-weight: normal;
     /*
     text-decoration: line-through; 
     text-decoration-style: solid; 
@@ -144,8 +175,31 @@ th.headerSortUp {
     cursor: s-resize;
 }
 
+.chart {
+    clear: both;
+    position: relative;
+    width: 100%;
+    margin-top: 40px;
+}
+
+.chart img {
+    width: 800px;    
+} 
+
+.qtip .chart img {
+    width: 100%;    
+} 
+.qtip .chart {
+    margin-top: 10px;  
+} 
+
 @media only screen and (max-width: 1000px) {
-    .imgwrapper {
+    .mmmdepot tr .stocknote
+    {
+        display:none; visibility:hidden;
+    }
+
+    .chart {
         width: 100% !important;
         float: none;
     }
@@ -174,9 +228,9 @@ th.headerSortUp {
        font-size: 9pt !important;
     }
 
-    .imgwrapper img {
+    .chart img {
         width: 100%;    
-    }
+    } 
 }
 
 @media only screen and (max-width: 500px) {
@@ -231,5 +285,53 @@ tr:not(.watchlist) td.stockiterator::before {
 .qtip-titlebar {
     border-bottom: 1px solid gray !important;
     background-color: white !important;
+}
+
+
+.controls {
+    position: absolute;
+    left: 0;
+    top: 0;
+    overflow: hidden;
+    padding: 5px;
+}
+
+.controls a {
+    position: relative;
+    margin-right: 10px;
+}
+.controls a.active {
+    font-weight: bold;
+}
+.controls:before { /* transparent background */
+    content: '';
+    position: absolute;;
+    left: 0;
+    top: 0;
+    width:1000px;
+    height: 1000px;
+    background: #EEE;
+    opacity: 0.7;
+}
+
+
+
+.darkmode body {
+    background: black; 
+    color: white;
+}
+
+.darkmode * {
+    filter: invert(1);
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background: black; 
+        color: white;
+    }
+    body * {
+        filter: invert(1);
+    }
 }
 
