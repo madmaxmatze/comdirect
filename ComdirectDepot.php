@@ -13,6 +13,8 @@ class ComdirectDepot{
 	private $differenceComparedToYesterday = null;
 	private $currency = null;
 	private $loadingTime = 0;
+	private $limitBottom = null;
+	private $limitTop = null;
 
 	// sum of lost of all stocks in minus
 	private $totalLost = null;
@@ -49,12 +51,12 @@ class ComdirectDepot{
 		$this->shareDepotKey = $shareDepotKey;
 
 		if ($this->isValid()) {
-			$multiplier = 1000 / $this->getBuyTotalValue();
+			$divider = $this->getBuyTotalValue() / 1000;
 					
 			foreach ($this->getStocksWithCount() as $stock) {
-				$stock->setTotalBuyValue($stock->getTotalBuyValue() * $multiplier);
-				$stock->setTotalValue($stock->getTotalValue() * $multiplier);			
-				$stock->setCount($stock->getCount() * $multiplier);
+				$stock->setTotalBuyValue($stock->getTotalBuyValue() / $divider);
+				$stock->setTotalValue($stock->getTotalValue() / $divider);
+				$stock->setCount($stock->getCount() / $divider);
 			}
 		}
 
@@ -168,6 +170,14 @@ class ComdirectDepot{
 		$this->currency = $currency;
 	}
 
+	public function setLimitTop($limit) {
+		$this->limitTop = $limit;
+	}
+
+	public function setLimitBottom($limit) {
+		$this->limitBottom = $limit;
+	}
+
 	public function loadingFinished() {
 		$this->stopTime = microtime(true); 
 	}
@@ -183,7 +193,7 @@ class ComdirectDepot{
 	public function toArray() {
 		$stocks = [];
 		foreach ($this->getStocks() as $stock) {
-			$stocks[] = [
+			$stockArray = [
 				"name" => $stock->getName(),
 				"count" => $stock->getCount(),
 				"comdirectId" => $stock->getId(),
@@ -203,6 +213,15 @@ class ComdirectDepot{
 				"buyDate" => $stock->getBuyDate() ? $stock->getBuyDate()->format('D M d Y H:i:s O') : null,
 				"date" => $stock->getDate()->format('D M d Y H:i:s O'),
 			];
+
+			if ($stock->getLimitBottom()) {
+				$stockArray["limitBottom"] = $stock->getLimitBottom();
+			}
+			if ($stock->getLimitTop()) {
+				$stockArray["limitTop"] = $stock->getLimitTop();
+			}
+
+			$stocks[] = $stockArray;
 		}
 	
 		return [

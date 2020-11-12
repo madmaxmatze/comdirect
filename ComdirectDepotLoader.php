@@ -292,10 +292,10 @@ class ComdirectDepotLoader{
 
 		// cut away crap in names (starting from things like AG to the end) 
 		// remove token
-		$name = preg_replace("/(\ AB\ O\.E\.\ \d*|\(.*\)|\&\#8203\;)/i", "", $name);
+		$name = preg_replace("/(\ AB\ O\.E\.\ \d*|\(.*\)|\ \- |Ucits\ Etf\ |\&\#8203\;)*/i", "", $name);
 
 		// remove token to end
-		$name = preg_replace("/(\ ag\ |Namens\-Aktien\ O\.N\.|\ Oyj|\ Vz|plc|inc\.|\ kgaa\ |Reg\.|Fund\ |\ corp|\ Com|\,|act\.|reg\.| N\.v\.|\ \-\ LC|\ \-\ Ld|inhaber|Pref\.\ ADR|Ucits\ Etf|\ kgag\ |\ se\ |\ SP\.|\ EO\-\,|\ Cl\.|\ Tech|\ ADR|\ \-\ EUR\ ACC|\ Group|\ Holding|GmbH|\ co\ |\ cp\ |co\.|\ \-\ P\ |\ \&\#39\;|\ \-\ A\ |\ A\ |\'A\').*$/i", "", $name);
+		$name = preg_replace("/(\ ag\ |Namens\-Aktien\ O\.N\.|\ Oyj|\ Vz|plc|inc\.|\ kgaa\ |Reg\.|Fund\ |\ corp|\ Com|\,|act\.|reg\.| N\.v\.|\ \-\ LC|\ \-\ Ld|inhaber|Pref\.\ ADR|\ kgag\ |\ se\ |\ SP\.|\ EO\-\,|\ Cl\.|\ Tech|\ ADR|\ \-\ EUR\ ACC|USD\ ACC|Registered\ Shares|o\.N\.|\ Group|\ Holding|GmbH|\ co\ |\ cp\ |co\.|\ \-\ P\ |\ \&\#39\;|\ \-\ A\ |\ A\ |\'A\').*$/i", "", $name);
 		
 		// make first letter of all words (text with leading space) big if only in big or only in small letters - so don't do with eg: ProSiebenMedia AG
 		$name = ucwords(strtolower(trim($name)));
@@ -303,6 +303,7 @@ class ComdirectDepotLoader{
 		
 		$name = preg_replace("/\ Us\ /i", " US ", $name);
 		$name = preg_replace("/S\&p/i", "S&P", $name);
+		$name = preg_replace("/Msci/i", "MSCI", $name);
 
 		$name = preg_replace("/Amundi\ (ETF)*(Index)*( )*(Solutions)*/i", "ETF ", $name);
 		$name = preg_replace("/(.*) Indikation/", "$1", $name);
