@@ -6,7 +6,6 @@ header("Expires: $ts");
 header("Pragma: cache");
 header("Cache-Control: max-age=$seconds_to_cache");	
 
-
 $html = file_get_contents("test.html");
 
 $cacheInvalidator = "?cache=" . substr(md5(filectime(__DIR__ . "/depot.css") * filectime(__DIR__ . "/depot.js")), 0, 10);

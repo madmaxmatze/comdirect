@@ -96,10 +96,19 @@ if ($type == "history") {
     $multiplier = 1000 / ($lastData["value"] - $lastData["profit"] - $lastData["lost"]);
   }
   
+  $today = new DateTime('now');
   $rowData = [];
+    
   foreach($data as $dateKey => $values) {
     $date = new DateTime($dateKey);
-    if ($date->format("N") <= 5) {    // no weekend
+    if ($date->format("N") <= 5   // no weekend
+      && ($date->diff($today)->days < 365 || $date->format("N") == 1) // only Monday when older then one year --> TODO: change to weekly average
+      /*
+        $weekData = [];
+        $date = new DateTime($date);
+        $week = $date->format("W");
+      */
+    ) {
       $rowData[] =
         "{c:[" .
           "{v:new Date(" . $date->format("Y," . ($date->format("m")-1) . ",j") . ")}" . 

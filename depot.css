@@ -1,14 +1,27 @@
 /* copied: http://www.irishstu.com/stublog/2011/12/13/tables-responsive-design-part-2-nchilds/ */
 html {
   font-family: Arial, Sans-Serif;
-  margin:0;
-  padding: 3px;
+  padding: 0;
+  margin: 0;
+  border: 3px solid white;
 }
 body {
-  margin:0;
+  margin: 0;
   padding: 0;
 }
 
+.darkmode body
+,.darkmode .qtip-content
+,.darkmode .qtip-titlebar
+ {
+  background: black !important; 
+  color: #ddd;
+}
+.darkmode a {color: white;}
+
+
+
+/* leading spinner */
 html:after {
   content: "";
   position: absolute;
@@ -21,33 +34,167 @@ html:after {
   background-position: center center;
   background-repeat: no-repeat;
 }
-
 html.loadingFinished:after {
   display: none;
 }
+html.shareDepot {
+  border-color: red;
+}
 
+/*
+darkmode is set mostly via adding darkmode class to html, to avoid dublicated CSS
+this is just for the initial load screen
+*/
+@media (prefers-color-scheme: dark) {
+  html:after {
+    filter: invert(100%);
+    -webkit-filter: invert(100%);
+  }
+}
+
+
+
+
+/* DEPOT TABLE */
+#depot_table {
+  position: relative;
+}
 .depot {
   font-size:12px;
   border-collapse:collapse;
   width: 100%;
 }
+
+.depot th,
+.depot td {
+  width: 1%;
+  overflow: hidden;
+  white-space: nowrap;
+}
   
 .depot th {
   text-align: right;
   padding:1px;
+}
+
+.depot thead th {
   border-bottom: 1px solid #aaa;
 }
 
 .depot tfoot th {
-  border-bottom: none;
   border-top: 1px solid #aaa;
 }
 
+.depot td {
+  border-collapse: collapse;
+  padding: 1px 3px;
+  text-align: right;
+}
+
+.depot .name
+,.depot .note
+,.depot .market
+,.depot .type {
+  text-align: left;
+}
+
+.depot th.name
+,.depot td.name
+,.depot th.note
+,.depot td.note {
+  width: auto;
+  max-width: 0;
+  cursor: pointer;  
+  user-select: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.depot tbody tr:hover td {
+  background-color: #dcdefd !important;
+}
+
+.depot tbody tr.odd {background-color: #EEE;}
+.depot tbody tr.even > .sortcolumn {background-color: #F4F4F4;}
+.depot tbody tr.odd > .sortcolumn,
+.depot thead tr > th.sortcolumn {background-color: #DDD;}
+
+.depot tr > td.buyDate
+, .depot tr > td.price
+, .depot tr > td.type
+{
+  border-left: 1px solid #aaa;
+}
+.depot tr td.iterator
+,.depot tr td.name
+,.depot tr td.buyValue
+,.depot tr td.valueDiffAbsToday
+{
+  border-right: 1px solid #aaa;
+}
+
+.depot tr .priceDiffPer {
+  font-weight: bold;
+} 
+
+.depot tr.isDataOld .price span,
+.depot tr.isDataOld .priceDiffPer span,
+.depot tr.isDataOld .valueDiffAbsToday span
+{
+  opacity: 0.7;
+  font-weight: normal;
+}
+
+.depot tr.isDataFromYesterday .price span,
+.depot tr.isDataFromYesterday .priceDiffPer span,
+.depot tr.isDataFromYesterday .valueDiffAbsToday span
+{
+  opacity: 0.3;
+  font-weight: normal;
+}
+.depot th.header {cursor: ns-resize;}
+.depot th.headerSortDown {cursor: n-resize;}
+.depot th.headerSortUp {cursor: s-resize;}
+
+
+.darkmode .depot tr.odd {background-color: #222;}
+
+.darkmode .depot tr:hover td {background-color: #333 !important;}
+
+.darkmode .depot tbody tr.even > .sortcolumn {background-color: #222;}
+.darkmode .depot tbody tr.odd > .sortcolumn,
+.darkmode .depot thead tr > th.sortcolumn {background-color: #333;}
+
+
+
+
+/* charts */
+.chart {
+  clear: both;
+  position: relative;
+  width: 100%;
+  margin-top: 40px;
+}
+
+.chart img {
+  width: 800px;    
+} 
+
+.darkmode .chart img,
+.darkmode #depot_chart_dev span {
+  filter: invert(100%);
+  -webkit-filter: invert(100%);
+}
+
+
+
+/* menu + qtip */
 .menu {
-  top: 2px;
-  left: 2px;
+  top: 1px;
+  left: 0px;
   position: absolute;
-  padding: 0 25px 25px 5px;
+  padding: 0 25px 25px 3px;
   z-index: 100;
   font-size: 18pt;
   line-height: 10pt;
@@ -70,140 +217,6 @@ html.loadingFinished:after {
   padding: 0px 0px;
 }
 
-.depot td {
-  border-collapse: collapse;
-  padding: 1px 3px;
-  text-align: right;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.depot .name
-,.depot .note
-,.depot .market
-,.depot .type {
-  text-align: left;
-}
-
-
-
-.depot thead th.name
-, .depot td.name
- {
-  cursor: pointer;  
-  user-select: none;
-  text-overflow: ellipsis;
-  white-space: normal;
-  overflow:hidden;
-  height: 14px;
-  display: block;
-}
-
-.depot th.name * {
-  display: block;
-  height: 15px;
-  overflow: hidden;
-}
-
-
-.depot .note {
-  position: relative;
-  max-width: 300px;
-  min-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
- 
-
-
-
-.depot tbody tr:hover td {
-  background-color: #dcdefd !important;
-}
-
-.depot tbody tr.odd {background-color: #EEE;}
-
-.depot tbody tr.even > .sortcolumn {background-color: #F4F4F4;}
-.depot tbody tr.odd > .sortcolumn,
-.depot thead tr > th.sortcolumn {background-color: #DDD;}
-
-/* .mmmdepot td a, .mmmdepot td a:visited, .mmmdepot th a, .mmmdepot th a:visited {text-decoration: none; color: #222;}
-*/
-
-
-tr > td.buyDate
-, tr > td.price
-, tr > td.type
-{
-  border-left: 1px solid #aaa;
-}
-tr td.iterator
-, tr td.name
-, tr td.buyValue
-, tr td.pricediffabs
-{
-  border-right: 1px solid #aaa;
-}
-
-tr .priceDiffPer {
-  font-weight: bold;
-} 
-
-tr.isDataOld .price,
-tr.isDataOld .priceDiffPer,
-tr.isDataOld .priceDiffAbs
-{
-  opacity: 0.7;
-  font-weight: normal;
-          /*
-  text-decoration: line-through; 
-  text-decoration-style: dashed; 
-  text-decoration-color: gray;
-  */
-}
-/*
-tr.isDataOld .stockpricediff,
-tr.isDataOld .stockprice {
-  opacity: 0.7;
-}
-*/
-
-tr.isDataFromYesterday .price,
-tr.isDataFromYesterday .priceDiffPer,
-tr.isDataFromYesterday .priceDiffAbs
-{
-  opacity: 0.3;
-  font-weight: normal;
-  /*
-  text-decoration: line-through; 
-  text-decoration-style: solid; 
-  text-decoration-color: black;
-  */
-}
-
-th.header {
-  cursor: ns-resize;
-}
-
-th.headerSortDown {
-  cursor: n-resize;
-}
-
-th.headerSortUp {
-  cursor: s-resize;
-}
-
-.chart {
-  clear: both;
-  position: relative;
-  width: 100%;
-  margin-top: 40px;
-}
-
-.chart img {
-  width: 800px;    
-} 
-
 .qtip .chart img {
   width: 100%;    
 } 
@@ -218,6 +231,8 @@ th.headerSortUp {
   margin-top: 0;
 }
 
+
+/* pnlTable */
 .pnlTable th {
   text-align: left;
 }
@@ -236,6 +251,7 @@ th.headerSortUp {
 }
 
 
+/* responsive */
 @media only screen and (max-width: 1200px) {
   .depot tr .note
   ,.depot tr .limitBottom
@@ -322,15 +338,23 @@ tr:not(.watchlist) td.iterator::before {
 
 
 /* make white */
+
 .qtip-default {
   border: 1px solid gray !important;
   background-color: white !important;
 }
-
 .qtip-titlebar {
   border-bottom: 1px solid gray !important;
   background-color: white !important;
 }
+/*
+.darkmode .qtip-default {
+  background-color: black !important;
+}
+.darkmode .qtip-titlebar {
+  background-color: black !important;
+}
+*/
 
 
 .controls {
@@ -339,18 +363,19 @@ tr:not(.watchlist) td.iterator::before {
   top: 0;
   overflow: hidden;
   padding: 5px;
+  z-index: 10;
 }
 
 .controls a {
   position: relative;
   margin-right: 10px;
 }
-.controls a.active {
+.controls .active {
   font-weight: bold;
 }
 .controls:before { /* transparent background */
   content: '';
-  position: absolute;;
+  position: absolute;
   left: 0;
   top: 0;
   width:1000px;
@@ -358,6 +383,7 @@ tr:not(.watchlist) td.iterator::before {
   background: #EEE;
   opacity: 0.7;
 }
+
 
 
 .treemapTooltip {
@@ -371,14 +397,13 @@ tr:not(.watchlist) td.iterator::before {
 }
 
 
-
 .shareDepotLabel {
   background: red;
   color: white;
 }
-th.name div .shareDepotLabel {
-  float:left;
-  margin-right: 5px;
+div.shareDepotLabel {
+  text-align: center;
+  padding: 4px;
 }
 
 
@@ -386,18 +411,17 @@ th.name div .shareDepotLabel {
 .alert {
   animation: blinker 1s linear infinite;
   font-weight: bold;
-
+  background-color: #fff2ac;
 }
-
+.darkmode .alert {
+  background-color: #666600;
+}
 @keyframes blinker {
   50% {
-    opacity: 0;
+    opacity: 0.4;
   }
 }
 
-.alert{
-  background-color: #fff2ac;
-}
 
 
 
@@ -425,33 +449,13 @@ input.search::placeholder {
   color: black;
   font-weight: bold;
 }
-
-
-
-.darkmode body {
-  background: black; 
-  color: #eee;
+.darkmode input.search::placeholder {
+  color: white;
 }
-.darkmode #depot_chart_dev img,
-.darkmode #depot_chart_dev span {
-  filter: invert(100%);
-  -webkit-filter: invert(100%);
-}
-.darkmode .depot tr.odd {background-color: #222;}
 
-.darkmode .depot tr:hover td {
-  background-color: #444 !important;
-}
-.darkmode .depot tbody tr.even > .sortcolumn {background-color: #222;}
-.darkmode .depot tbody tr.odd > .sortcolumn,
-.darkmode .depot thead tr > th.sortcolumn {background-color: #444;}
 
-@media (prefers-color-scheme: dark) {
-  /*
-  mostly via adding darkmode class via JS, to avoid dublicated CSS
-  */
-  html:after {
-    filter: invert(100%);
-    -webkit-filter: invert(100%);
-  }
+#depot_credits {
+  text-align: center;
 }
+
+.darkmode .google-visualization-tooltip {background-color: black;}

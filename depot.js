@@ -1,6 +1,6 @@
 // module pattern: https://www.smashingmagazine.com/2011/10/essential-jquery-plugin-patterns/
 
-(function($) {
+(function($) { // Depot Table
   var DepotTable = (function($element, depot) {
     var visitedPortfolioKeys = JSON.parse(localStorage.getItem('portfoliokeys'));
     var tooltipStockChartUrl = "https://charts.comdirect.de/charts/rebrush/design_small.ewf.chart?WIDTH=256&HEIGHT=173&TIME_SPAN=[TIME]&TYPE=MOUNTAIN&ID_NOTATION=[ID]"
@@ -8,9 +8,14 @@
     init = function() {
       $("html").addClass("loadingFinished");
 
+      if (depot.sharedKey) {
+        $("html").addClass("shareDepot");
+        $("body").prepend("<div class='shareDepotLabel'>Please note: This portfolio is <b>scaled to 1000€</b> to allow public sharing. The actual total depot value is larger.</div>");
+      }
+
       var headRow = "<tr>"
           + "<th class='iterator'></th>"
-          + "<th class='name alignleft'>" + depot.title + "</th>"
+          + "<th class='name'>" + depot.title + "</th>"
           + "<th class='note'><input class='search' data-column='2' placeholder='Note' /></th>"
           + "<th class='type'><input class='search' data-column='3' placeholder='Type' /></th>"
           + "<th class='market'>Market</th>"
@@ -24,7 +29,7 @@
           + "<th class='priceDiffPer'>%</th>"
           + "<th class='valueDiffAbsToday'>Today</th>"
           + "<th class='valueDiffPer'>Abs%</th>"
-          + "<th class='valueDiffAbs sortcolumn headerSortUp'>Abs</th>"
+          + "<th class='valueDiffAbs'>Abs</th>"
           + "<th class='value'>Value</th>"
         + "</tr>";
 
@@ -40,9 +45,12 @@
       initTableSorter();
       initMenu();
       initStockContextMenu();
+      $.logDuration(starttime, "table rendered"); 
     };
 
     fillData = function() {
+      var sortingZero = -0.0000001;
+
       var tableBody = $element.find("> table > tbody");
       for (var id in depot.stocks) {
         var stock = depot.stocks[id];
@@ -56,9 +64,7 @@
                 + "<td class='name" + (stock.isAboveLimit || stock.isBelowLimit ? " alert" : "") + "'>" 
                   + stock.name
                 + "</td>"
-                + "<td class='note' title='" + (stock.note ? stock.note.replace(/\'/i, "\"") : "") + "'>" 
-                  + (stock.note ? stock.note : "") 
-                + "</td>"
+                + "<td class='note' title='" + stock.note.replace(/\'/i, "\"") + "'>" + stock.note + "</td>"
                 + "<td class='type'>" + stock.type + "</td>"
                 + "<td class='market'>" + stock.market + "</td>"
                 + "<td class='buyDate'>"
@@ -73,26 +79,26 @@
                 + "<td class='buyValue'>"
                   + (stock.count ? $.formatNumber(stock.buyValue, depot.currency, 0) : "")
                 + "</td>"
-                + "<td class='limitBottom'>"
-                  + (stock.limitBottom ? $.formatNumber(stock.limitBottom, depot.currency, 2) : "")
+                + "<td class='limitBottom" + (stock.isBelowLimit ? " alert" : "") + "'>"
+                  + (stock.limitBottom ? $.formatNumber(stock.limitBottom, stock.currency, 2) : "")
                 + "</td>"
-                + "<td class='limitTop'>"
-                  + (stock.limitTop ? $.formatNumber(stock.limitTop, depot.currency, 2) : "")
+                + "<td class='limitTop" + (stock.isAboveLimit ? " alert" : "") + "'>"
+                  + (stock.limitTop ? $.formatNumber(stock.limitTop, stock.currency, 2) : "")
                 + "</td>"
                 + "<td class='price'>"
-                  + $.formatNumber(stock.price, stock.currency, 2)
+                  + "<span>" + $.formatNumber(stock.price, stock.currency, 2) + "</span>"
                 + "</td>"
                 + "<td class='priceDiffPer'" + $.getStyleColorForNumber(stock.priceDiffPer * 100) + ">"
-                  + $.formatNumber(stock.priceDiffPer, "%", 1)
+                  + "<span>" + $.formatNumber(stock.priceDiffPer, "%", 1) + "</span>"
                 + "</td>"
                 + "<td class='valueDiffAbsToday'" + $.getStyleColorForNumber(stock.priceDiffPer * 100) + ">"
-                  + (stock.count ? $.formatNumber(stock.valueDiffAbsToday, depot.currency) : "0")
+                  + "<span>" + (stock.count ? $.formatNumber(stock.valueDiffAbsToday, depot.currency) : sortingZero) + "</span>"
                 + "</td>"
                 + "<td class='valueDiffPer'" + $.getStyleColorForNumber(stock.valueDiffPer) + ">"
-                  + (stock.count ? $.formatNumber(stock.valueDiffPer, "%") : "0")
+                  + (stock.count ? $.formatNumber(stock.valueDiffPer, "%") : sortingZero)
                 + "</td>"
                 + "<td class='valueDiffAbs'" + $.getStyleColorForNumber((stock.value - stock.buyValue) / depot.value * 10000) + ">"
-                  + (stock.count ? $.formatNumber(stock.value - stock.buyValue, depot.currency) : "0")
+                  + (stock.count ? $.formatNumber(stock.value - stock.buyValue, depot.currency) : sortingZero)
                 + "</td>"
                 + "<td class='value'>"
                   + (stock.count ? $.formatNumber(stock.value, depot.currency) : "")
@@ -105,11 +111,6 @@
     };
 
     refreshFooter = function() {
-      var buyValueCellContent = $.formatNumber(depot.buyValue, depot.currency, 0);
-      if (depot.sharedKey) {
-        buyValueCellContent = " <span class='shareDepotLabel'>" + buyValueCellContent + "</span>";
-      }
-      
       var buyValue = 0;
       var value = 0;
       var buyDateAgeAverage = 0;
@@ -148,11 +149,6 @@
     }
 
     initMenu = function() {
-      $element.find("> table > tbody > tr > th.name div").html("<div>"
-        + (depot.sharedKey ? "<span class='shareDepotLabel'>Public 1k</span> " : "")
-        + "<span>" + depot.title + "</span>"
-      + "</div>");
-
       var html = "";
 
       if (depot.key) {
@@ -178,7 +174,7 @@
        
       if (html) {
         var menuElement = $("<div class='menu'>≡</div>");
-        $element.after(menuElement);
+        $element.append(menuElement);
         menuElement.qtip({
           content: {
             text: html
@@ -202,7 +198,7 @@
     }
 
     initTableSorter = function () {
-      var sortColumnNumber = $element.find("> table > tfoot > tr > th.sortcolumn").prevAll().length;
+      var sortColumnNumber = $element.find("> table > tfoot > tr > th.valueDiffAbs").addClass("sortcolumn headerSortUp").prevAll().length;
       
       $element.children("table").tablesorter({
         sortList: [[sortColumnNumber,0], [1,0]],
@@ -289,7 +285,7 @@
           + "<a href='https://www.comdirect.de/inf/aktien/detail/uebersicht.html?ID_NOTATION=" + stock.comdirectId + "' target='_blank'><img src='https://lh3.ggpht.com/oDdHm6AlrMpjCIazyHQVzeEIcH28_7RSi7CGTUFz629aV6t0M2nAmHG93ZhSJqifGtw=w32' width='32' /></a> "
           + (stock.isin ? 
             "<a href='https://aktie.traderfox.com/visualizations/" + stock.isin + "' target='_blank'><img src='https://pbs.twimg.com/profile_images/797361743626465280/eAhqkp1P_400x400.jpg' width='32' /></a> " 
-            + "<a href='http://markets.businessinsider.com/searchresults?_search=" + stock.isin + "' target='_blank'><img src='https://static1.businessinsider.com/assets/images/us/favicons/favicon-32x32.png' width='32' /></a> " 
+            + "<a href='http://markets.businessinsider.com/searchresults?_search=" + stock.isin + "' target='_blank'><img src='https://i.insider.com/596e4e7a552be51d008b50fd?width=600&format=jpeg&auto=webp' width='32' /></a> " 
             + "<a href='http://m.ariva.de/search/search.m?searchname=" + stock.isin + "' target='_blank'><img src='https://pbs.twimg.com/profile_images/435793734886645760/TmtKTE6Y.png' width='32' /></a> " 
             + "<a href='https://www.onvista.de/aktien/" + stock.isin + "' target='_blank'><img src='https://s.onvista.de/css-69545/web/portal/nl/layout_img/favicon.png' width='32' /></a> " 
             + "<a href='http://www.finanzen.net/suchergebnis.asp?_search=" + stock.isin + "' target='_blank'><img src='https://images.finanzen.net/images/favicon/favicon-32x32.png' width='32' /></a> " 
@@ -301,14 +297,15 @@
             : "")
           + (stock.isin && stock.type == "ETF" ? 
              "<a href='https://www.justetf.com/de/etf-profile.html?isin=" + stock.isin + "' target='_blank'><img src='https://www.justetf.com/images/logo/justetf_icon_m.png' width='32' /></a> " 
-             + "<a href='https://de.extraetf.com/etf-profile/" + stock.isin + "' target='_blank'><img src='data:image/png;base64,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' width='32' /></a> "
+             + "<a href='https://de.extraetf.com/etf-profile/" + stock.isin + "' target='_blank'><img src='https://de.extraetf.com/favicon.ico' width='32' /></a> "
+             + "<a href='https://www.trackingdifferences.com/ETF/ISIN/" + stock.isin + "' target='_blank'><img src='https://www.trackingdifferences.com/images/favicon-32.png' width='32' /></a> "
             : "")
           + (stock.wkn && stock.type == "Stock" ? 
             "<a href='http://www.finanznachrichten.de/suche/suchergebnis.asp?words=" + stock.wkn + "' target='_blank'><img src='https://fns1.de/g/fb.png' width='32' /></a> " 
             : "")
 
           + "<div class='chart'>"
-            + "<div class='controls'><a class='active'>10d</a> <a>6m</a> <a>5y</a> <a>max</a></div>"
+            + "<div class='controls'><a class='active'>10d</a> <a>6m</a> <a>1y</a> <a>5y</a> <a>max</a></div>"
             + "<img src='" + tooltipStockChartUrl.replace("[TIME]", "10D").replace("[ID]", stock.comdirectId) + "' />"
           + "</div>"
         + "</p>";
@@ -317,26 +314,26 @@
 
         var cell = row.find("> td.name");
         cell.qtip({
-          prerender: false,
-          content: {
-            title: stock.name + (stock.symbol ? " (" + stock.symbol + ")" : ""),
-            button: 'Close',
-            text: html
-          },
-          position: {
-            my: 'top left',
-            at: 'top left',
-            target: cell
-          },
-          show: {
-            event: 'click',
-            solo: true
-          },
-          hide: {
-            fixed: true,
-            delay: 300
-          },
-          events: {
+          prerender: false
+          ,content: {
+            title: stock.name + (stock.symbol ? " (" + stock.symbol + ")" : "")
+            ,button: 'Close'
+            ,text: html
+          }
+          ,position: {
+            my: 'top left'
+            ,at: 'top left'
+            ,target: cell
+          }
+          ,show: {
+            event: 'click'
+            ,solo: true
+          }
+          ,hide: {
+            fixed: true
+            ,delay: 300
+          }
+          ,events: {
             show: function(event, api) {
               $(api.elements.tooltip).find(".controls a").click(function(link) {
                 setTooltipChartDuration(link, stock.comdirectId);
@@ -411,217 +408,214 @@
 
 
 
-(function($) {
+(function($) { // PortfolioHistoryChart
   var PortfolioHistoryChart = (function($element, portfolioKey) {
     var dataTable = null;
     var dataView = null;
     var duration = null;
     var chart = null;
     var chartOptions = {
-      width: '100%',
-      height: 400,
-      hAxis: {
+      width: '100%'
+      ,height: 400
+      ,hAxis: {
         textStyle : {
-          fontSize: 12
+          fontSize : 12
         }
-      },
-      backgroundColor : "transparent",
-      animation: {
-        duration: 600,
-        easing: 'inAndOut'
-      },
-      focusTarget: 'category',
-      chartArea: {
-        top: 10,
-        bottom: 40,
-        left: 40,
-        right: 40
-      },
-      tooltip: {isHtml: true},
-      isStacked: 'absolute',
-      vAxes: {
+      }
+      ,backgroundColor : "transparent"
+      ,animation: {
+        duration: 600
+        ,easing: 'inAndOut'
+      }
+      ,focusTarget: 'category'
+      ,chartArea: {
+        top: 10
+        ,bottom: 40
+        ,left: 40
+        ,right: 40
+      }
+      ,tooltip: {isHtml: true}
+      ,isStacked: 'absolute'
+      ,vAxes: {
         0: { 
-          format: 'short',
-          textStyle : {fontSize: 12}
-        },
-        1: {
-          gridlines: {count : 0},
-          format: 'percent',
-          textStyle : {fontSize: 12}
+          format: 'short'
+          ,textStyle : {fontSize: 12}
         }
-      },
-      annotations: {
+        ,1: {
+          gridlines: {count : 0}
+          ,format: 'percent'
+          ,textStyle : {fontSize: 12}
+          ,viewWindowMode : 'maximized'
+        }
+      }
+      
+      ,annotations: {
         textStyle: {
-          fontSize: 8,
-          color: '#000000',
-          auraColor: '#FFFFFF'
+          fontSize: 8
+          ,color: '#000000'
+          ,auraColor: '#FFFFFF'
         }
-      },
-      legend: 'none', // {position: 'right', textStyle: {color: 'blue', fontSize: 16}},
-      seriesType: 'area',
-      series: {
+      }
+      ,legend: 'none'
+      ,seriesType: 'area'
+      ,series: {
         0: {
-          targetAxisIndex: 0,
-          lineWidth: 0,
-          color: '#777777'    // gray area
-        },
-        1: {
-          targetAxisIndex: 0,
-          lineWidth: 0,
-          color: '#006600'    // green area
-        },
-        2: {
-          targetAxisIndex: 0,
-          lineWidth: 0,
-          color: '#FFBBBB'    // red area
-        },
-        3: {
-          targetAxisIndex: 0,
-          type: 'line',
-          lineWidth: 1
-        },
-        4: {
-          targetAxisIndex: 1,
-          type: 'line',
-          lineWidth: 1,
-          lineDashStyle: [4, 4]
+          targetAxisIndex: 0
+          ,lineWidth: 0
+          ,color: '#AAA'    // gray area
+        }
+        ,1: {
+          targetAxisIndex: 0
+          ,lineWidth: 0
+          ,color: '#006600'    // green area
+        }
+        ,2: {
+          targetAxisIndex: 0
+          ,lineWidth: 0
+          ,color: '#FFBBBB'    // red area
+        }
+        ,3: {
+          targetAxisIndex: 0
+          ,type: 'line'
+          ,lineWidth: 1
+        }
+        ,4: {
+          targetAxisIndex: 1   // right axis percentage
+          ,type: 'line'
+          ,lineWidth: 1
         }
       }
     };
 
     init = function() {
       loadData();
+      if ($("html").hasClass("darkmode")) {
+        chartOptions.hAxis.textStyle.color = '#DDD';
+        chartOptions.vAxes[0].textStyle.color = '#DDD';
+        chartOptions.vAxes[0].gridlines = {color : '#444'};
+        chartOptions.vAxes[0].minorGridlines = {color : '#444'}
+        
+        chartOptions.vAxes[1].textStyle.color = '#DDD';
+        chartOptions.vAxes[1].baselineColor = {color : '#AAA'};
+
+        chartOptions.series[0].color = '#FFF';
+        chartOptions.series[1].color = '#00FF00';
+        chartOptions.series[2].color = '#FF0000';
+        chartOptions.series[4].lineWidth = 2;
+      }
+
       $(window).on('resizeEnd', drawChart);
     
-      $element.append("<div></div><div class='controls'><a data-duration='31'>1m</a> <a data-duration='184'>6m</a> <a data-duration='365'>1y</a> <a>max</a></div>");
+      $element.append("<div></div><div class='controls'><a data-duration='31'>1m</a> <a data-duration='184'>6m</a> <a data-duration='365'>1y</a> <select style='position: relative; display: none'><option data-duration='100000'>max</option></select></div>");
       $element.find("a").click(setDuration);
+      $element.find("select").on("click change", setDuration);
+ 
       chart = new google.visualization.ComboChart($element.find("div")[0]);
     };
 
-    setDuration = function (clickedLink) {
-      var link = $(clickedLink.target);
-      link.parent().find("a").removeClass("active");
-      link.addClass("active");
-      
-      duration = link.data("duration");
-      
-      drawChart();
+    setDuration = function (clickedElement) {
+      var clickedElement = $(clickedElement.target);
+    
+      clickedElement.parent().find("*").removeClass("active");
+      clickedElement.addClass("active");
+      if (clickedElement[0].selectedOptions) {        // for select options
+        duration = $(clickedElement[0].selectedOptions).attr("data-duration");
+      } else {
+        duration = clickedElement.data("duration");   // for a href links
+      }
+    
+      drawChart();      
     };
 
     loadData = function () {
+      var depotPath = "https://apps.mathiasnitzsche.de/comdirect/";
       $.ajax({
-        url: "https://apps.mathiasnitzsche.de/comdirect/data.php?type=history&portfolio_key=" + portfolioKey,
+        url: depotPath + "data.php?type=history&portfolio_key=" + portfolioKey,
         jsonp: "wrapper",
         dataType: "jsonp",
         // jsonpCallback: 'historyData',
         async: true, // not working with jsonp
         success: function(response) {
-          dataTable = new google.visualization.DataTable(response);
-          prepareDataView();
+          prepareDataView(response);
           $element.find("a:nth-child(2)").click();
         }
       });
     }
 
-    prepareDataView = function(){
-      dataView = new google.visualization.DataView(dataTable);
+    prepareDataView = function(historyData){
+      var rows = [];
+      for (var dateString in historyData.rows) {
+        var date = new Date(dateString);
+        date.setHours(0, -date.getTimezoneOffset(), 0, 0);  //removing the timezone offset
+        var value = historyData.rows[dateString][0];
+        var diff = historyData.rows[dateString][1];
       
-      dataView.setColumns([
-        0 // date
-        ,{ // tooltip
-          type: 'string'
-          ,role: 'tooltip'
-          ,properties: {
-             html: true
-          }
-          ,calc: function (dt, row) {
-            var date = dt.getValue(row, 0);
-            date.setHours(0, -date.getTimezoneOffset(), 0, 0);  //removing the timezone offset
-            var value = dt.getValue(row, 1);
-            var diff = dt.getValue(row, 2);
-            
-            return $.getPnlTable({
-              "headline" : date.toISOString().substr(0, 10) + ", " + $.getWeekday(date),
-              "valueCurrency" : "€",
-              "valueStart" : (value - diff),
-              "valueEnd" : value
-            });
+        rows.push([
+          date                       
+          ,$.getPnlTable({
+            "headline" : date.toISOString().substr(0, 10) + ", " + $.getWeekday(date)
+            ,"valueCurrency" : "€"
+            ,"valueStart" : (value - diff)
+            ,"valueEnd" : value
+          })
+          ,(value - Math.max(diff, 0))                    // gray
+          ,Math.max(diff, 0)                              // green
+          ,Math.abs(Math.min(diff, 0))                    // red
+          ,value                                          // Abs Line
+          ,"color:" + (diff > 0 ? "#99AA99" : "#FFCCCC")  // absLineStyle
+          ,diff / (value - diff)                          // percLine
+          ,"color:" + (diff > 0 ? "green" : "red")        // percLineStyle
+        ]);
+      }
+
+      dataTable = new google.visualization.DataTable();
+      dataTable.addColumn('date', "Date");
+      dataTable.addColumn({role: 'tooltip', type: 'string', p: {'html': true}});
+      dataTable.addColumn('number', "GreyArea");
+      dataTable.addColumn('number', "GreenArea");
+      dataTable.addColumn('number', "RedArea");
+      dataTable.addColumn('number', "AbsLine");
+      dataTable.addColumn({role: 'style', type: 'string'});  // line style
+      dataTable.addColumn('number', "PercLine");
+      dataTable.addColumn({role: 'style', type: 'string'});  // line style
+      dataTable.addRows(rows);
+
+      var dateRange = dataTable.getColumnRange(0);
+      if (dateRange.min && dateRange.max) {
+        var minYear = dateRange.min.getFullYear();
+        var maxYear = dateRange.max.getFullYear();
+        if (minYear != maxYear) {
+          $element.find("select").show();
+          for (var y = minYear; y <= maxYear; y++) {
+            $element.find("select").append("<option data-duration='" + y + "'>" + y + "</option>")
           }
         }
-        ,{ // gray area
-          calc: function (dt, row) {
-            var value = dt.getValue(row, 1);
-            var diff = dt.getValue(row, 2);
-            return value - Math.max(diff, 0);
-          }
-          ,type:'number'
-        }
-        ,{ // green area
-          calc: function (dt, row) {
-            var diff = dt.getValue(row, 2);
-            return Math.max(diff, 0);
-          }
-          ,type:'number'
-        }
-        ,{ // red area
-          calc: function (dt, row) {
-            var diff = dt.getValue(row, 2);
-            return Math.abs(Math.min(diff, 0));
-          }
-          ,type:'number'
-        }
-        ,1 // total value red/green line
-        ,{ // + styling
-          calc: function (dt, row) {
-            var diff = dt.getValue(row, 2);
-            return "color:" + (diff > 0 ? "green" : "red");
-          }
-          ,type: 'string'
-          ,role: 'style'    
-        }
-        ,{ // + annotationMarker
-          calc: function (dt, row) {
-            return (row == 0 ? "absolute" : null);
-          }
-          ,type: 'string'
-          ,role: 'annotation'    
-        }
-        ,{ // percentage value red/green line
-          calc: function (dt, row) {
-            var value = dt.getValue(row, 1);
-            var diff = dt.getValue(row, 2);
-            return diff / (value - diff);
-          }
-          ,type:'number'
-        }
-        ,{ //  + styling
-          calc: function (dt, row) {
-            var diff = dt.getValue(row, 2);
-            return "color:" + (diff > 0 ? "green" : "red");
-          }
-          ,type: 'string'
-          ,role: 'style'    
-        }
-        ,{ // + annotationMarker
-          calc: function (dt, row) {
-            return (row == 0 ? "percental" : null);
-          }
-          ,type: 'string'
-          ,role: 'annotation'    
-        }
-      ]);
+      }
+      
+      dataView = new google.visualization.DataView(dataTable);
     }
 
     drawChart = function() {
-      var priorDate = new Date().setDate((new Date()).getDate() - duration);
-      dataView.setRows(dataTable.getFilteredRows([{column: 0, minValue: priorDate}]));
+      var minDate = new Date().setDate((new Date()).getDate() - duration);
+      var maxDate = new Date();
 
-      /* change to image
-      google.visualization.events.addListener(linearChart, 'ready', function () {
-         element.innerHTML = '<img src="' + linearChart.getImageURI() + '">';
+      if (duration > 1000 && duration < 3000) {     // a year
+        minDate = new Date(duration, 0, 1);
+        maxDate = new Date(duration, 11, 31, 23, 59, 59);
+      }
+
+      dataView.setRows(dataTable.getFilteredRows([{
+        column: 0
+        ,minValue: minDate
+        ,maxValue: maxDate
+      }]));
+
+      /*
+      google.visualization.events.addListener(chart, 'ready', function () {
+         $element.controls.append($("<a href='" + chart.getImageURI() + "' target='_blank'>img</a>"));
       }); 
       */
-      
+
       chart.draw(dataView, chartOptions);
     }
     
@@ -636,82 +630,99 @@
 
 
 
-
-
-(function($) {
+(function($) { // ProfitAndLossChart
   var ProfitAndLossChart = (function($element, depot) {
     var dataTable = null;
     var dataView = null;
+    var sortColumn = 0;
     var chartOptions = {
-      bar: {groupWidth: "80%"},
-      bars: 'horizontal',
-      legend: { position: "none" },
-      isStacked: true,
-      focusTarget: 'category',
-      theme: 'material',
-      width: '100%',
-      height: 600,
-      backgroundColor : "transparent",
-      hAxis: {
+      bar: {groupWidth: "80%"}
+      ,bars: 'horizontal'
+      ,legend: { position: "none" }
+      ,isStacked: true
+      ,focusTarget: 'category'
+      ,theme: 'material'
+      ,width: '100%'
+      ,height: 600
+      ,backgroundColor : "transparent"
+      ,hAxis: {
         format : "short"
-      },
-      chartArea: {
-        top: 10,
-        bottom: 25,
-        left: 140,
-        right: 25
-      },
-      tooltip: {isHtml: true},         
-      annotations: {
-        style: "point",
-        textStyle: {
-          fontSize: 10,
-          bold: true,
-          color: '#111',
+      }
+      ,vAxis : {
+        maxTextLines : 1
+      }
+      ,chartArea: {
+        top: 10
+        ,bottom: 25
+        ,left: 140
+        ,right: 25
+      }
+      ,tooltip: {isHtml: true}
+      ,annotations: {
+        style: "point"
+        ,textStyle: {
+          fontSize: 10
+          ,bold: true
+          ,color: '#111'
         }
-      },
-      series: {
+      }
+      ,series: {
         0: {
-          targetAxisIndex: 0,
-          lineWidth: 0,
-          color: '#777777'    // gray area
-        },
-        1: {
-          targetAxisIndex: 0,
-          lineWidth: 0,
-          color: '#006600'    // green area
-        },
-        2: {
-          targetAxisIndex: 0,  // red area
-          lineWidth: 0,
-          dataOpacity: 0.1,
-          color: '#ff7777'
+          targetAxisIndex: 0
+          ,lineWidth: 0
+          ,color: '#777777'    // gray area
+        }
+        ,1: {
+          targetAxisIndex: 0
+          ,lineWidth: 0
+          ,color: '#006600'    // green area
+        }
+        ,2: {
+          targetAxisIndex: 0  // red area
+          ,lineWidth: 0
+          ,dataOpacity: 0.1
+          ,color: '#ff7777'
         }
       }
     };
 
     init = function() {
       if ($("html").hasClass("darkmode")) {
-        chartOptions.hAxis = {textStyle: {color: 'white'}};
+        chartOptions.hAxis = {textStyle: {color: '#DDD'}};
         chartOptions.vAxis = chartOptions.hAxis;
         chartOptions.annotations.textStyle.color = '#DDD';
         chartOptions.series[2].dataOpacity = 0.3;
       }
 
       loadData();
-      drawBarChart();
       $(window).on('resizeEnd', drawBarChart);
+
+      $element.html("<div style='padding-top:13px'></div> <div class='controls'><a>total</a> <a>abs</a> <a>rel</a></div>");
+      $element.find("a").click(switchBarType).first().click();
     };
+
+    switchBarType = function (clickedLink) {
+      var link = $(clickedLink.target);
+      link.parent().find("a").removeClass("active");
+      link.addClass("active");
+      sortColumn = link.prevAll().length;
+
+      drawBarChart();
+    }
 
     loadData = function () {
       dataTable = new google.visualization.DataTable();
+      dataTable.addColumn('number', "absSort");
+      dataTable.addColumn('number', "relSort");
+      dataTable.addColumn('number', "totalSort");
       dataTable.addColumn('string', "Name");
       dataTable.addColumn({role: 'tooltip', type: 'string', p: {'html': true}});
       dataTable.addColumn('number', "Gray");
       dataTable.addColumn('number', "Green");
+      dataTable.addColumn({type: 'string', role: 'style'});
       dataTable.addColumn({role: "annotation", type: "string"});
       dataTable.addColumn('number', "Red");
-
+      
       for (var id in depot.stocks) {
         var stock = depot.stocks[id];
         if (stock.count) {
@@ -726,22 +737,30 @@
           });
       
           dataTable.addRow([
-            stock.name.substr(0, 30)                    // label
+            stock.value                                 // FOR TOTAL SORTING
+            ,stock.valueDiffAbs                         // FOR ABS SORTING
+            ,stock.valueDiffPer                         // FOR REL SORTING
+            ,stock.name                                 // label
             ,tooltipHtml                                // tooltip
             ,Math.min(stock.value, stock.buyValue)      // gray
-            ,Math.max(0, stock.valueDiffAbs)               // green
+            ,Math.max(0, stock.valueDiffAbs)            // green
+            ,"color:" + (stock.valueDiffPer > 1 ? "#007700" : (stock.valueDiffPer < -1 ? "#FF0000" : "#777777"))
             ,$.formatNumber(stock.valueDiffPer, "%", null, true) // annotation
-            ,Math.max(0, stock.valueDiffAbs * -1)           // red
+            ,Math.max(0, stock.valueDiffAbs * -1)       // red
           ]);
         }
       }
+
+      dataView = new google.visualization.DataView(dataTable);
     }
 
     drawBarChart = function() {
-      chartOptions.height = dataTable.getNumberOfRows() * 20 + 80;
-      
-      var chart = new google.visualization.BarChart($element[0]);
-      chart.draw(dataTable, chartOptions);
+      chartOptions.height = dataView.getNumberOfRows() * 20 + 80;
+      dataView.setRows(dataTable.getSortedRows({column: sortColumn}));
+      dataView.hideColumns([0,1,2]); // remove sort columns
+
+      var chart = new google.visualization.BarChart($element.find("div:first")[0]);
+      chart.draw(dataView, chartOptions);
     }
     
     init();
@@ -755,53 +774,39 @@
 
 
 
-
-(function($) {
+(function($) { // ShareChart
   var ShareChart = (function($element, depot) {
-    var dataTable = null;
-    var dataView = null;
-    var duration = "today";
+    var dataTables = [];
+    var duration = 0;
     var chart = null;
     var isDarkMode = ($element.parents(".darkmode").length > 0);
     var chartOptions = {
       animation: {
-        duration: 300,
-        easing: 'inAndOut',
-      },
-      highlightOnMouseOver: true,
-      maxDepth: 0,
-      headerHeight: 0,
-      showScale: false,
-      minColorValue: -50, 
-      maxColorValue: 50,
-      fontColor: (isDarkMode ? '#EEE' : '#000000'),
-      noColor: (isDarkMode ? '#000000' : '#F5F5F5'),
-      minColor: '#ff0000', 
-      midColor: (isDarkMode ? '#333' : '#cccccc'),
-      maxColor: '#009900',
-      width: '100%',
-      height: 400,
-      generateTooltip: function (row, share, color) {
-        var stockId = dataTable.getValue(row, 6);
-        var stock = depot.stocks[stockId];
-        
-        return "<div class='treemapTooltip'>"
-          + "<b>" + stock.name + (stock.symbol ? " ("  + stock.symbol + ")" : "") + "</b><br>"
-          + "share: " + $.formatNumber(share * 100, "%") + "<br>"
-          + "total: <span " + $.getStyleColorForNumber(stock.valueDiffPer) + ">" 
-            + $.formatNumber(stock.valueDiffPer, "%", null, true)
-          + "</span><br>"
-          + (stock.isDataFromToday ? "today: <span " + $.getStyleColorForNumber(stock.priceDiffPer * 10) + ">" 
-            + $.formatNumber(stock.priceDiffPer, "%", null, true) 
-            + "</span>" : "")
-        + " </div>";
+        duration: 300
+        ,easing: 'inAndOut'
+      }
+      ,highlightOnMouseOver: true
+      ,maxDepth: 0
+      ,headerHeight: 0
+      ,showScale: false
+      ,minColorValue: -50
+      ,maxColorValue: 50
+      ,fontColor: (isDarkMode ? '#DDD' : '#000000')
+      ,noColor: (isDarkMode ? '#000000' : '#F5F5F5')
+      ,minColor: '#ff0000'
+      ,midColor: (isDarkMode ? '#333' : '#cccccc')
+      ,maxColor: '#009900'
+      ,width: '100%'
+      ,height: 400
+      ,generateTooltip: function (row, share, color) {
+        return dataTables[duration].getValue(row, 4);
       }
     };
 
     init = function() {
-      $element.html("<div></div><div class='controls'><a>today</a> <a>all</a></div>");
+      $element.html("<div></div><div class='controls'><a>today</a>| <a>total</a> <a>type</a></div>");
  
-      prepareTreeDataView();
+      prepareTreeDataTables();
       
       $(window).on('resizeEnd', drawTreeChart);
 
@@ -810,74 +815,104 @@
         chart.setSelection([]);
       });
 
-      $element.find("a").click(setDuration);
-      $element.find("a:first").click();
+      $element.find("a").click(setDuration).first().click();
     };
 
     setDuration = function (clickedLink) {
-      duration = clickedLink.target.innerText;
-      $(clickedLink.target).parent().find("a").removeClass("active");
-      $(clickedLink.target).addClass("active");
+      clickedLink = $(clickedLink.target);
+      duration = clickedLink.prevAll("a").length;
+      clickedLink.parent().find("a").removeClass("active");
+      clickedLink.addClass("active");
       drawTreeChart();
     };
     
-    prepareTreeDataView = function(){
-      dataTable = new google.visualization.DataTable();
-      dataTable.addColumn('string', "LabelToday");
-      dataTable.addColumn('string', "Parent");
-      dataTable.addColumn('number', "Size");
-      dataTable.addColumn('number', "ColorToday");
-      dataTable.addColumn('string', "LabelTotal");
-      dataTable.addColumn('number', "ColorTotal");
-      dataTable.addColumn('number', "StockId");
-      
+    prepareTreeDataTables = function(){
       var rootKey = "Portfolio";
-      dataTable.addRow([rootKey, "", 0, 0, rootKey, 0, 0]);
 
+      dataTables[0] = new google.visualization.DataTable({
+        cols: [{label: 'Label', type: 'string'}
+          ,{label: 'Parent', type: 'string'}
+          ,{label: 'Size', type: 'number'}
+          ,{label: 'Color', type: 'number'}
+          ,{label: 'Tooltip', type: 'string'}
+        ],
+        rows: [{c:[{v:rootKey},{v:""},{v:0},{v:0},{v:""}]}] // add root
+      });
+      dataTables[1] = dataTables[0].clone();
+      dataTables[2] = dataTables[0].clone();
+      
+      var typeData = {};
+     
       for (var id in depot.stocks) {
         var stock = depot.stocks[id];
         if (stock.count) {
           var label = stock.name;
-  
           if (stock.symbol) {
             label = stock.symbol.length < label.length ? stock.symbol : label.toUpperCase();
           }
+
           var share = stock.value / depot.value * 100;
           var sharelabel = $.formatNumber(share, "%");
-
           var todayLabel = $.formatNumber(stock.priceDiffPer, "%", (Math.abs(stock.priceDiffPer) >= 10 ? 0 : 1), true);
           var totalLabel = $.formatNumber(stock.valueDiffPer, "%", (Math.abs(stock.valueDiffPer) >= 10 ? 0 : 1), true);
-          
-          totalLabel = label + " (" + totalLabel + ", " + sharelabel + ")";
-          todayLabel = label + " (" + (stock.isDataFromToday ? todayLabel + ", " : "") + sharelabel + ")";
+         
+          var tooltip = "<div class='treemapTooltip'>"
+            + "<b>" + stock.name + (stock.symbol ? " ("  + stock.symbol + ")" : "") + "</b><br>"
+            + "share: " + $.formatNumber(share, "%") + "<br>"
+            + "total: <span " + $.getStyleColorForNumber(stock.valueDiffPer) + ">" 
+              + $.formatNumber(stock.valueDiffPer, "%", null, true)
+            + "</span><br>"
+            + (stock.isDataFromToday ? "today: <span " + $.getStyleColorForNumber(stock.priceDiffPer * 10) + ">" 
+              + $.formatNumber(stock.priceDiffPer, "%", null, true) 
+              + "</span>" : "")
+          + " </div>";
 
-          dataTable.addRow([
-            todayLabel,
-            rootKey,
-            stock.value / depot.value, 
-            (stock.isDataFromToday ? stock.priceDiffPer : null),
-            totalLabel,
-            stock.valueDiffPer,
-            parseInt(id)
+          dataTables[0].addRow([
+            label + " (" + (stock.isDataFromToday ? todayLabel + ", " : "") + sharelabel + ")"
+            ,rootKey
+            ,stock.value / depot.value / 10   // devide by 10 to change range from +-50 to +-5
+            ,(stock.isDataFromToday ? stock.priceDiffPer : null)
+            ,tooltip
           ]);
+
+          dataTables[1].addRow([
+            label + " (" + totalLabel + ", " + sharelabel + ")"
+            ,rootKey
+            ,stock.value / depot.value 
+            ,stock.valueDiffPer
+            ,tooltip
+          ]);
+
+          // collect typechart data          
+          if (!typeData[stock.type]) {
+            typeData[stock.type] = {"value":0, "diff":0}
+          }
+          typeData[stock.type]["value"] += stock.value;
+          typeData[stock.type]["diff"] += stock.valueDiffAbs;
         }
       }
 
-      dataView = new google.visualization.DataView(dataTable); 
+      for (var type in typeData) {
+        var share = typeData[type].value / depot.value;
+        var diffPer = typeData[type].diff / (typeData[type].value - typeData[type].diff) * 100;
+        dataTables[2].addRow([
+          type
+          ,rootKey
+          ,share
+          ,diffPer
+          ,"<div class='treemapTooltip'>"
+            + "<b>" + type + "</b><br>"
+            + "share: " + $.formatNumber(share * 100, "%") + "<br>"
+            + "diff: <span " + $.getStyleColorForNumber(diffPer) + ">" 
+              + $.formatNumber(diffPer, "%", null, true)
+            + "</span><br>"
+          + " </div>"
+        ]);
+      }
     }
 
     drawTreeChart = function() {
-      if (duration == "today") {
-        chartOptions.minColorValue = -5; 
-        chartOptions.maxColorValue = 5;
-        dataView.setColumns([0, 1, 2, 3]);
-      } else {
-        chartOptions.minColorValue = -50; 
-        chartOptions.maxColorValue = 50;
-        dataView.setColumns([4, 1, 2, 5]); 
-      }
-    
-      chart.draw(dataView, chartOptions);           
+      chart.draw(dataTables[duration], chartOptions);           
     }
     
     init();
@@ -891,8 +926,7 @@
 
 
 
-
-(function($) {
+(function($) { // DepotDevelopmentChart
   var DepotDevelopmentChart = (function($element, depot) {
     var imgUrl = "https://charts.comdirect.de/charts/rebrush/design_large.chart?TYPE=CONNECTLINE&TIME_SPAN=TIMEPLACEHOLDER&AXIS_SCALE=log&DATA_SCALE=rel&LNOTATIONS=IDPLACEHOLDER&LCOLORS=COLORPLACEHOLDER&AVGTYPE=simple&HCMASK=3&SHOWHL=0";
     var colors = [  // orinial Comdirect colors, just the last one replaced
@@ -966,7 +1000,7 @@
       $element.html(  "<b>Top10 Stocks (" + Math.round(top10value / depot.value * 100) + "% of total)</b><br>"
         + "<img src='' /><br />"
         + html + "<br>"
-        + "<div class='controls' style='top:50px'><a>10d</a> <a>6m</a> <a>5y</a> <a>max</a></div>"
+        + "<div class='controls' style='top:50px'><a>10d</a> <a>6m</a> <a>1y</a> <a>5y</a> <a>max</a></div>"
       );
  
       $element.find("a").click(setDuration).first().click();
@@ -983,8 +1017,21 @@
  
 
 
+(function ($) { // $.extend.function
+  // create trigger to resizeEnd event     
+  // https://stackoverflow.com/questions/8950761/google-chart-redraw-scale-on-window-resize
+  $(window).resize(function() {
+    if(this.resizeTO) {
+      clearTimeout(this.resizeTO);
+    }
+    this.resizeTO = setTimeout(function() {
+      if (!window.lastResizeWidth || Math.abs(window.lastResizeWidth - window.innerWidth) > 5) {
+        window.lastResizeWidth = window.innerWidth;
+        $(this).trigger('resizeEnd');
+      }
+    }, 500);
+  }); 
 
-(function ($) {
   $.extend({
     logDuration: function(startTime, stepTitle) {
       var duration = (new Date()).getTime() - startTime.getTime();
@@ -1004,7 +1051,6 @@
       var minColor = 80;
       var maxColor = 230;
       var number = numberBetweenMinusAndPlus100  * (maxColor - minColor) / 100;
-
       var red = Math.round(Math.min(maxColor, minColor - Math.min(number, 0)));
       var green = Math.round(Math.min(maxColor, minColor + Math.max(number, 0)));
 
@@ -1050,6 +1096,7 @@
       if (decimals === null || typeof decimals === 'undefined') {
         decimals = Math.ceil(Math.max(0, 1 - Math.log10(Math.abs(number))));
       }
+      decimals = Math.min(decimals, 2);
 
       var formatOptions = {
         maximumFractionDigits : decimals,
@@ -1063,7 +1110,7 @@
           + (type == "EUR" || type == "€" ? "€" : "")
           + (type == "DOL" || type == "USD" ? "$" : "")
       ;
-    },
+    }, 
 
     getPnlTable: function (options) { 
       var diff = options.valueEnd - options.valueStart;
@@ -1107,11 +1154,26 @@
           + "</td>"
         + "</tr>"
       + "</table>";
-    },           
+    }, 
 
-    loadDepot: function (portfolioKey, islocalCachingAllowed, callbackFuntion) {  
+    isDarkmode: function () {
+      var url = new URL(window.location);  
+      return (url.searchParams.get("dark") || window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+  });
+})(jQuery);
+
+
+
+(function ($) { // Depot loader
+  $.extend({
+    initDepot: function () {  
+      var url = new URL(window.location);
+      var portfolioKey = url.searchParams.get("portfolio_key");
       if (!portfolioKey) return;
 
+      var islocalCachingAllowed = url.searchParams.get("cache");
+      
       var handleDepotJson = function(depot){
         if (islocalCachingAllowed) {
           sessionStorage.setItem('cachedDepot', JSON.stringify(depot));
@@ -1129,6 +1191,10 @@
           }
           if (depot.stocks[id].limitBottom && depot.stocks[id].price < depot.stocks[id].limitBottom) {
             depot.stocks[id].isBelowLimit = true;
+          }
+
+          if (!depot.stocks[id].note) {
+            depot.stocks[id].note = "";
           }
 
           if (depot.stocks[id].date) {
@@ -1164,7 +1230,34 @@
                               && today.getMonth() === depot.date.getMonth()
                               && today.getDate() === depot.date.getDate();
          
-        callbackFuntion(depot);
+        $.logDuration(starttime, "data loaded (" + depot.loadtime + "ms server side)");
+
+        $("body").append(
+          "<div id='depot_table'></div>"
+          + "<div id='depot_chart_share' class='chart'></div>"
+          + "<div id='depot_chart_history' class='chart'></div>"
+          + "<div id='depot_chart_pnl' class='chart'></div>"
+          + "<div id='depot_chart_dev' class='chart'></div>"
+          + "<div id='depot_credits' class='chart'>More information:<br>"
+            + "<a href='https://mathiasnitzsche.de/comdirect' target='_blank'>https://mathiasnitzsche.de/comdirect</a>"
+          + "</div>"
+        );
+
+        $("head title").text(depot.title);
+        $("#depot_table").depotTable(depot);
+        
+        google.charts.load('current', {'packages': ['corechart', 'treemap', 'bar']});
+        google.charts.setOnLoadCallback(function() {
+          $.logDuration(starttime, "chart lib loaded");
+          
+          $("#depot_chart_share").shareChart(depot);
+          $("#depot_chart_history").portfolioHistoryChart(portfolioKey);
+          $("#depot_chart_pnl").profitAndLossChart(depot);
+          $("#depot_chart_dev").depotDevelopmentChart(depot);
+          // last 12 months chart: https://developers.google.com/chart/interactive/docs/gallery/calendar
+          
+          $.logDuration(starttime, "charts rendered");
+        }); 
       }
 
       $.ajax({
@@ -1190,55 +1283,10 @@
 
 
 
-$(function() {
-  console.log ("Hope you like the app! https://mathiasnitzsche.de/comdirect");
+$(function() { // main
   $.logDuration(starttime, "js loaded");
 
-  // create trigger to resizeEnd event     
-  // https://stackoverflow.com/questions/8950761/google-chart-redraw-scale-on-window-resize
-  $(window).resize(function() {
-    if(this.resizeTO) {
-      clearTimeout(this.resizeTO);
-    }
-    this.resizeTO = setTimeout(function() {
-      $(this).trigger('resizeEnd');
-    }, 500);
-  });
+  $("html").addClass($.isDarkmode() ? "darkmode" : "lightmode");
 
-  // Load depot from backend
-  var url = new URL(window.location);
-  
-  var isDarkmode = (url.searchParams.get("dark") || window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  $("html").addClass(isDarkmode ? "darkmode" : "lightmode");
-
-  var portfolioKey = url.searchParams.get("portfolio_key");
-  var islocalCachingAllowed = url.searchParams.get("cache");
-
-  $.loadDepot(portfolioKey, islocalCachingAllowed, function(depot) {
-    $.logDuration(starttime, "data loaded");
-
-    $("body").append(
-      "<div id='depot_table'></div>"
-      + "<div id='depot_chart_share' class='chart'></div>"
-      + "<div id='depot_chart_dev' class='chart'></div>"
-      + "<div id='depot_chart_history' class='chart'></div>"
-      + "<div id='depot_chart_pnl' class='chart'></div>"
-    );
-
-    $("head title").text(depot.title);
-    $("#depot_table").depotTable(depot);
-    $.logDuration(starttime, "table rendered"); 
-    
-    google.charts.load('current', {'packages': ['corechart', 'treemap', 'bar']});
-    google.charts.setOnLoadCallback(function() {
-      $.logDuration(starttime, "chart lib loaded");
-      $("#depot_chart_share").shareChart(depot);
-      $("#depot_chart_dev").depotDevelopmentChart(depot);
-      $("#depot_chart_history").portfolioHistoryChart(portfolioKey);
-      $("#depot_chart_pnl").profitAndLossChart(depot);
-      // last 12 months chart: https://developers.google.com/chart/interactive/docs/gallery/calendar
-      
-      $.logDuration(starttime, "charts rendered");
-    });  
-  });
+  $.initDepot();
 });
