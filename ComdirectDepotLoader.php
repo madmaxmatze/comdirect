@@ -38,16 +38,16 @@ class ComdirectDepotLoader{
 		}
 		
 		$depot = new ComdirectDepot($depotKey);
-
+		
 		try {
 			$url = self::COMDIRECT_FRIENDS_URL . $depotKey;
-			$depotHtml = $this->getContentFromUrl($url, 60);
+			$depotHtml = $this->getContentFromUrl($url);	
 
 			if ($depotHtml !== null){
 				$depotHtml = $this->replaceStringsInContent($depotHtml);
 			
-				$currentTotalValue = $this->getCurrentTotalValue($depotHtml);
-				if ($currentTotalValue) {
+				// $currentTotalValue = $this->getCurrentTotalValue($depotHtml);
+				// if ($currentTotalValue) {
 					$depot->setTitle($this->getTitle($depotHtml));
 				//	$depot->setTotalValue($currentTotalValue);
 				// 	$depot->setBuyTotalValue($this->getBuyTotalValue($depotHtml));
@@ -57,13 +57,13 @@ class ComdirectDepotLoader{
 					$depot->setCurrency($this->getCurrency($depotHtml));
 	
 					if (!$shareDepotKey && !$cached && $depot->isValid()) {
-						$this->saveDepotTotals($depot);
+						$this->saveDepotDetails($depot);
 					}
 				
 					if ($shareDepotKey) {
 						$depot->makeSharable($shareDepotKey);
 					}
-				}
+				// }
 			}
 		} catch (Exception $e) {
 		    // ignore
@@ -78,12 +78,12 @@ class ComdirectDepotLoader{
 	}
 
 	private function getTitle($depotHtml) {
-		$title = "Depot";
-		if (preg_match('/<h1>(.+)<\/h1>/s', $depotHtml, $match)) {
-			$title = str_replace("Musterdepot:", "", $match[1]);
+		$title = null;
+		if (preg_match('/<h1>\-*(.+)<\/h1>/s', $depotHtml, $match)) {
+			$title = trim(str_replace("Musterdepot:", "", $match[1]));
 		}
 	
-		return trim($title);
+		return $title;
 	}
 
 	private function getBuyTotalValue($depotHtml) {
@@ -203,9 +203,9 @@ class ComdirectDepotLoader{
 					'/s', $stockHtml, $match)) {
 					$additionalAttr["symbol"] = trim($match[1]);
 				}
+
 				if (preg_match('/' .
-						'\<td.*?\>ISIN\<\/td\>.*?' . 
-						'\<td.*?\>\-*(.*?)\<\/td\>' . 
+						'\&isin\=([A-Z0-9]+)\&' . 
 					'/s', $stockHtml, $match)) {
 					$additionalAttr["isin"] = trim($match[1]);
 				}
@@ -247,7 +247,6 @@ class ComdirectDepotLoader{
 		// var_export($data);
 
 		$stock = new ComdirectStock();
-		$stock->setCount($this->toNumber($data[0]));
 		
 		$stock->setUrl($data[1]);
 		$id = $this->getIdFromUrl($data[1]);
@@ -280,6 +279,13 @@ class ComdirectDepotLoader{
 		$stock->setBuyPrice($this->toNumber($data[16]));
 		$stock->setBuyDate(DateTime::createFromFormat('d.m.y', $data[17], new DateTimeZone('Europe/Berlin')));
 		$stock->setTotalBuyValue($this->toNumber($data[18]));
+		// if count was defined but no value given
+		if ($stock->getTotalBuyValue()) {
+			$stock->setCount($this->toNumber($data[0]));
+		}
+
+		$stock->setLimitTop($this->toNumber($data[19]));
+		$stock->setLimitBottom($this->toNumber($data[20]));
 
 		// $output[$i]['DIFFABSTODAY'] = $output[$i]['COUNT'] * $output[$i]['DIFFABS'];
 		
@@ -290,14 +296,14 @@ class ComdirectDepotLoader{
 		// add spaces for the replacement
 		$name = " " . $name . " ";
 
-		// cut away crap in names (starting from things like AG to the end) 
 		// remove token
-		$name = preg_replace("/(\ AB\ O\.E\.\ \d*|\(.*\)|\ \- |Ucits\ Etf\ |\&\#8203\;)*/i", "", $name);
+		$name = preg_replace("/(\ AB\ O\.E\.\ \d*|\(.*\)|Ucits\ Etf\ |\&\#8203\;)*/i", "", $name);
 
-		// remove token to end
-		$name = preg_replace("/(\ ag\ |Namens\-Aktien\ O\.N\.|\ Oyj|\ Vz|plc|inc\.|\ kgaa\ |Reg\.|Fund\ |\ corp|\ Com|\,|act\.|reg\.| N\.v\.|\ \-\ LC|\ \-\ Ld|inhaber|Pref\.\ ADR|\ kgag\ |\ se\ |\ SP\.|\ EO\-\,|\ Cl\.|\ Tech|\ ADR|\ \-\ EUR\ ACC|USD\ ACC|Registered\ Shares|o\.N\.|\ Group|\ Holding|GmbH|\ co\ |\ cp\ |co\.|\ \-\ P\ |\ \&\#39\;|\ \-\ A\ |\ A\ |\'A\').*$/i", "", $name);
-		
+		// cut away crap in names (starting from things like AG to the end) 
+		$name = preg_replace("/(\ ag\ |Namens\-Aktien\ O\.N\.|\ Oyj|\ Vz|plc|inc\.|\ kgaa\ |Reg\.|Fund\ |\ corp|\ Com|\,|act\.|reg\.| N\.v\.|\ \-\ LC|\ \-\ Ld|inhaber|Pref\.\ ADR|\ kgag\ |INH\ O\.*N\.*|\ se\ |\ SP\.|\ EO\-\,|\ Cl\.|\ Tech|\ ADR|\ Dr\ |\ *\-*\ EUR\ ACC|USD\ DIS|USD\ ACC|Registered\ Shares|o\.N\.|\ Group|\ Holding|GmbH|\ co\ |\ cp\ |co\.|\ \&\#39\;|\ \-\ .\ |\ A\ |\'A\').*$/i", "", $name);
+
 		// make first letter of all words (text with leading space) big if only in big or only in small letters - so don't do with eg: ProSiebenMedia AG
+		$name = preg_replace("/[\- ]+$/i", "", $name);
 		$name = ucwords(strtolower(trim($name)));
 		$name = htmlspecialchars_decode($name);
 		
@@ -305,6 +311,7 @@ class ComdirectDepotLoader{
 		$name = preg_replace("/S\&p/i", "S&P", $name);
 		$name = preg_replace("/Msci/i", "MSCI", $name);
 
+		$name = preg_replace("/Ishares /i", "ETF ", $name);
 		$name = preg_replace("/Amundi\ (ETF)*(Index)*( )*(Solutions)*/i", "ETF ", $name);
 		$name = preg_replace("/(.*) Indikation/", "$1", $name);
 		$name = preg_replace("/Euro\ \/\ Euro/", "Euro", $name);
@@ -391,39 +398,59 @@ class ComdirectDepotLoader{
 		return $number;
 	}
 
-	private function saveDepotTotals(ComdirectDepot $depot){
+	private function saveDepotDetails(ComdirectDepot $depot){
+		/* monthly buckets 
+		$cacheKey = "details"
+					. "_" . $depot->getDepotKey()
+					. "_" . date("Y-m");
+		*/
+
 		$cacheKey = "history_" . $depot->getDepotKey();
 
 		$history = $this->cache->get($cacheKey);
 		if (!$history) {
 			$history = [];
 		}
+
+		
+		/*
+		foreach ($history as $date => $depotItem) {
+			if (isset($depotItem["stocks"])) {
+				$stocksWithIds = [];
+				foreach ($depotItem["stocks"] as $stock) {
+					if (isset($stock["count"])) {
+						if (!isset($stock["name"])) {
+							$additionalAttrKey = "stock_info_" . $stock["comdirectId"];
+							$additionalAttr = $this->cache->get($additionalAttrKey);
+							if (isset($additionalAttr["name"])) {
+								$stock["name"] = $additionalAttr["name"];
+							}
+						}
+
+						$id = isset($stock["id"]) ? $stock["id"] : $stock["comdirectId"];
+						$stock["comdirectId"] = $id;
+						unset($stock["id"]);
+						$stocksWithIds[$id] = $stock;
+					}
+				}
+				$history[$date]["stocks"] = $stocksWithIds;
+			}
+			if (count($history[$date]["stocks"]) == 0) {
+				unset ($history[$date]["stocks"]);
+			}
+		}
+		*/
+		
 		$midnightString = $depot->getNewestStockTimestamp()->format("Y-m-d") 
 							. "T00:00:00+00:00";
-				
-		$stocks = [];
-		foreach ($depot->getStocksWithCount() as $stock) {
-			$stocks[] = [
-				"id" => $stock->getId(),
-				// "name" => $stock->getName(),
-				"count" => $stock->getCount(),
-				"buyPrice" => $stock->getBuyPrice(),
-				"value" => $stock->getTotalValue(),
-				"price" => $stock->getPrice(),
-			];
-		}
 
-		$history[$midnightString] = [
-			"value" => $depot->getTotalValue(),
-			"profit" => $depot->getTotalProfit(),
-			"lost" => $depot->getTotalLost(),
-			"stocks" => $stocks,
-		];
+		$history[$midnightString] = $depot->toArray();
+		$history[$midnightString]["value"] = $depot->getTotalValue();
+		$history[$midnightString]["diffAbs"] = round($depot->getDiffererenceAbsolute(), 2);
+		$history[$midnightString]["time"] = time();
+		unset($history[$midnightString]["loadtime"]);
+		unset($history[$midnightString]["key"]);
 
 		$this->cache->put($cacheKey, $history);
-		
-		if (count($history) > 1) {
-			$this->cache->put("save_" . $depot->getNewestStockTimestamp()->format("Y-m-d") . "_" . $cacheKey, $history);
-		}
-	}
+	}		
 }

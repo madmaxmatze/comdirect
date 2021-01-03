@@ -23,6 +23,8 @@ class ComdirectStock{
   private $buyDate = null;
   private $date = null;
   private $now = null;
+  private $limitBottom = 0;
+  private $limitTop = 0;
 
   public function __construct() {
     $this->now = new DateTime('now');
@@ -161,6 +163,22 @@ class ComdirectStock{
 
   public function isCurrencyEur() {
     return ($this->currency == "EUR");
+  }
+
+  public function getLimitTop() {
+    return $this->limitTop;
+  }
+
+  public function setLimitTop($limit) {
+    $this->limitTop = $limit;
+  }
+
+  public function getLimitBottom() {
+    return $this->limitBottom;
+  }
+
+  public function setLimitBottom($limit) {
+    $this->limitBottom = $limit;
   }
 
   public function setUrl($url) {

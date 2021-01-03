@@ -2,8 +2,8 @@
 html {
   font-family: Arial, Sans-Serif;
   padding: 0;
-  margin: 0;
-  border: 3px solid white;
+  margin: 3px;
+  user-select: none;
 }
 body {
   margin: 0;
@@ -37,8 +37,15 @@ html:after {
 html.loadingFinished:after {
   display: none;
 }
-html.shareDepot {
-  border-color: red;
+.shareDepotInfo {
+  display: none;
+  background: red;
+  color: white;
+  text-align: center;
+  padding: 4px;
+}
+html.shareDepot .shareDepotInfo {
+  display: block;
 }
 
 /*
@@ -53,11 +60,20 @@ this is just for the initial load screen
 }
 
 
+h1 {
+  margin: 0;
+  font-size: 12pt;
+}
+h1 a {
+  color: black;
+  text-decoration: none;
+}
 
 
 /* DEPOT TABLE */
 #depot_table {
   position: relative;
+  border-top: 1px solid grey;
 }
 .depot {
   font-size:12px;
@@ -191,14 +207,23 @@ this is just for the initial load screen
 
 /* menu + qtip */
 .menu {
-  top: 1px;
-  left: 0px;
+  top: 0px;
+  right: 1px;
+  font-weight: bold;
   position: absolute;
-  padding: 0 25px 25px 3px;
+  padding: 4px 4px 10px 20px;
   z-index: 100;
-  font-size: 18pt;
+  font-size: 12pt;
   line-height: 10pt;
 }
+.menu:before {
+  content: "≡";
+  padding-right: 4px;
+  vertical-align: top;
+  font-size: 18pt;
+}
+
+h1 a:hover,
 .menu:hover
 , .depot thead th:hover
 , .depot td a:hover
@@ -248,6 +273,11 @@ this is just for the initial load screen
 .pnlTable td.total {
   border-top: 1px solid #333;
   font-weight:bold;
+}
+
+
+.history_info {
+  font-size: 11px;
 }
 
 
@@ -366,7 +396,7 @@ tr:not(.watchlist) td.iterator::before {
   z-index: 10;
 }
 
-.controls a {
+.controls a, .controls select {
   position: relative;
   margin-right: 10px;
 }

@@ -6,7 +6,7 @@ include_once "vendor/FileCache.php";
 
 function getGETParam($name) {
   $param = ($name && isset($_GET[$name]) && $_GET[$name] ? $_GET[$name] : null);
-  if (!$param) die("No " . urlencode($name) . " param");
+  // if (!$param) die("No " . urlencode($name) . " param");
   return $param;
 }
 
@@ -85,47 +85,95 @@ if ($type == "history") {
     die("No depot loaded");
   }
 
-  $data = $cache->get("history_" . $depot->getDepotKey());
-  if (!$data) {
-    die("No historical data loaded");
-  }
-
+  /*
   $multiplier = 1;
   if ($depot->getShareDepotKey()) {
     $lastData = end($data);
-    $multiplier = 1000 / ($lastData["value"] - $lastData["profit"] - $lastData["lost"]);
+    $multiplier = 1000 / ($lastData["value"] - $lastData["diffAbs"]);
   }
+  */ 
+
+  $filterStockId = getGETParam('filterStockId');
   
   $today = new DateTime('now');
-  $rowData = [];
-    
-  foreach($data as $dateKey => $values) {
-    $date = new DateTime($dateKey);
-    if ($date->format("N") <= 5   // no weekend
-      && ($date->diff($today)->days < 365 || $date->format("N") == 1) // only Monday when older then one year --> TODO: change to weekly average
-      /*
-        $weekData = [];
-        $date = new DateTime($date);
-        $week = $date->format("W");
-      */
-    ) {
-      $rowData[] =
-        "{c:[" .
-          "{v:new Date(" . $date->format("Y," . ($date->format("m")-1) . ",j") . ")}" . 
-                ",{v:" . round($values["value"] * $multiplier) . "}" .
-                ",{v:" . round(($values["profit"] + $values["lost"]) * $multiplier) . "}" .
-              "]}";
+  $responseData = [
+    "rows"=>[],
+    "stockFilterAvailable" => [],
+    "stockFilterUsed" => ($filterStockId ? $filterStockId : 0)
+  ];
+
+
+  $historyData = $cache->get("history_" . $depot->getDepotKey());
+  if ($historyData) {
+
+    $lastBuyValue = 0;
+
+    foreach($historyData as $dateKey => $values) {
+      $date = new DateTime($dateKey);
+      $value = round($values["value"]);
+      $diffAbs = round($values["diffAbs"]);
+      $count = 0;
+
+      if ($date->format("N") <= 5   // no weekend
+        // && ($date->diff($today)->days < 365 || $date->format("N") == 1) // only Monday when older then one year --> TODO: change to weekly average
+        /*
+          $weekData = [];
+          $date = new DateTime($date);
+          $week = $date->format("W");
+        */
+
+      ){
+        $lastBuyValue = $value - $diffAbs; // just take the very last buyValue
+
+        // overwrite values for single stock
+        if ($filterStockId) {
+          $value = 0;
+          $diffAbs = 0;
+          if (isset($values["stocks"]) && isset($values["stocks"][$filterStockId])) {
+            $stock = $values["stocks"][$filterStockId];
+            $count = $stock["count"];
+            $value = round($stock["value"]);          
+            if (isset($stock["buyValue"])) {
+              $buyValue = $stock["buyValue"];
+            } else if ($stock["price"] == $stock["buyPrice"]) {   // workaround for Euro
+              $buyValue = $value;
+            } else {
+              $buyValue = $stock["buyPrice"] * $stock["count"];
+            }
+            $diffAbs = round($value - $buyValue);
+          }
+        }
+        
+        $responseData["rows"][$date->format("Y-m-d")] = [
+          $value,
+          $diffAbs
+        ];
+        if ($value && $count) {
+          array_push($responseData["rows"][$date->format("Y-m-d")], $count);
+        }
+        
+        if (isset($values["stocks"])) {
+          foreach ($values["stocks"] as $id => $stock) {
+            if (isset($stock["count"]) && $stock["count"] > 0) {
+              $responseData["stockFilterAvailable"][$stock['comdirectId']] = isset($stock['name']) ? $stock['name'] : "";
+            }
+          }
+        }
       }
+    }
+
+    // scale to 1k if public depot link
+    if ($depot->getShareDepotKey() && $lastBuyValue) {
+      $multiplier = 1000 / $lastBuyValue;
+      foreach($responseData["rows"] as $dateKey => $values) {
+        $responseData["rows"][$dateKey][0] *= $multiplier;
+        $responseData["rows"][$dateKey][1] *= $multiplier;
+        if (isset($responseData["rows"][$dateKey][2])) {
+          $responseData["rows"][$dateKey][2] *= $multiplier;
+        }
+      }
+    }
   }
 
-  echo $wrapper . "({" .
-    "cols:[{type:'date',label:'Date'}" .
-        ",{type:'number'}" .
-        ",{type:'number'}" .
-    "]," .
-    "rows:[" . join(",", $rowData) . "]" .
-  "});";
+  echo $wrapper . "(" . json_encode($responseData) . ");";
 }
-
-
-

@@ -11,10 +11,9 @@ class ComdirectDepot{
 	private $buyTotalValue = null;
 	private $differerenceAbsolute = null;
 	private $differenceComparedToYesterday = null;
+	private $newestStockTimestamp = null;
 	private $currency = null;
 	private $loadingTime = 0;
-	private $limitBottom = null;
-	private $limitTop = null;
 
 	// sum of lost of all stocks in minus
 	private $totalLost = null;
@@ -28,7 +27,7 @@ class ComdirectDepot{
 	}
 	
 	public function isValid() {
-		return ($this->getTotalValue() !== null && $this->getBuyTotalValue() > 0);
+		return ($this->getTitle() !== null);
 	}
 
 	public function getTitle() {
@@ -50,16 +49,14 @@ class ComdirectDepot{
 	public function makeSharable($shareDepotKey) {
 		$this->shareDepotKey = $shareDepotKey;
 
-		if ($this->isValid()) {
-			$divider = $this->getBuyTotalValue() / 1000;
-					
-			foreach ($this->getStocksWithCount() as $stock) {
-				$stock->setTotalBuyValue($stock->getTotalBuyValue() / $divider);
-				$stock->setTotalValue($stock->getTotalValue() / $divider);
-				$stock->setCount($stock->getCount() / $divider);
-			}
+		$divider = $this->getBuyTotalValue() / 1000;
+				
+		foreach ($this->getStocksWithCount() as $stock) {
+			$stock->setTotalBuyValue($stock->getTotalBuyValue() / $divider);
+			$stock->setTotalValue($stock->getTotalValue() / $divider);
+			$stock->setCount($stock->getCount() / $divider);
 		}
-
+	
 		$this->totalValue = null;
 		$this->buyTotalValue = null;	
 	}
@@ -120,6 +117,7 @@ class ComdirectDepot{
 		$this->differenceComparedToYesterday = $differenceComparedToYesterday;
 	}
 
+
 	public function getNewestStockTimestamp() {
 		if ($this->newestStockTimestamp == null) {
 			foreach ($this->stocks as $stock) {
@@ -170,20 +168,12 @@ class ComdirectDepot{
 		$this->currency = $currency;
 	}
 
-	public function setLimitTop($limit) {
-		$this->limitTop = $limit;
-	}
-
-	public function setLimitBottom($limit) {
-		$this->limitBottom = $limit;
-	}
-
 	public function loadingFinished() {
 		$this->stopTime = microtime(true); 
 	}
 
 	public function getLoadingDuration() {
-		return round($this->stopTime - $this->startTime, 3);
+		return round(($this->stopTime - $this->startTime) * 1000);
 	}
 
 	public function getLoadingTime() {
@@ -191,47 +181,62 @@ class ComdirectDepot{
 	}
 
 	public function toArray() {
-		$stocks = [];
+		$depotArray = [
+			"title" => $this->getTitle(),
+			"currency" => $this->getCurrency(),
+			"loadtime" => $this->getLoadingDuration(),
+			"stocks" => [],
+		];
+		
+		if ($this->getShareDepotKey()) {
+			$depotArray["sharedKey"] = $this->getShareDepotKey();
+		} else if ($this->getDepotKey()) {
+			$depotArray["key"] = $this->getDepotKey();
+		}
+		
 		foreach ($this->getStocks() as $stock) {
 			$stockArray = [
 				"name" => $stock->getName(),
-				"count" => $stock->getCount(),
 				"comdirectId" => $stock->getId(),
-				"wkn" => $stock->getWkn(),
-				"isin" => $stock->getIsin(),
-				"symbol" => $stock->getSymbol(),
-				"note" => $stock->getNote(),
-				"currency" => $stock->getCurrency(),
 				"type" => $stock->getType(),
 				"market" => $stock->getMarket(),
 				"price" => $stock->getPrice(),
-				"priceDiff" => $stock->getDifferenceAbsolutePerStock(),
-				"value" => $stock->getTotalValue(),		
-				"valueDiffToday" => $stock->getDifferenceAbsolute(),		
-				"buyPrice" => $stock->getBuyPrice(),				
-				"buyValue" => $stock->getTotalBuyValue(),
+				"priceDiffAbs" => $stock->getDifferenceAbsolutePerStock(),
 				"buyDate" => $stock->getBuyDate() ? $stock->getBuyDate()->format('D M d Y H:i:s O') : null,
 				"date" => $stock->getDate()->format('D M d Y H:i:s O'),
 			];
-
+			if ($stock->getCurrency()) {
+				$stockArray["currency"] = $stock->getCurrency();
+			}
+			if ($stock->getSymbol()) {
+				$stockArray["symbol"] = $stock->getSymbol();
+			}
+			if ($stock->getWkn()) {
+				$stockArray["wkn"] = $stock->getWkn();
+			}
+			if ($stock->getIsin()) {
+				$stockArray["isin"] = $stock->getIsin();
+			}
+			if ($stock->getCount()) {
+				$stockArray["count"] = $stock->getCount();
+				$stockArray["buyPrice"] = $stock->getBuyPrice();				
+				$stockArray["buyValue"] = $stock->getTotalBuyValue();
+				$stockArray["value"] = $stock->getTotalValue();
+				$stockArray["valueDiffAbsToday"] = $stock->getDifferenceAbsolute();
+			}	
+			if ($stock->getNote()) {
+				$stockArray["note"] = $stock->getNote();
+			}
 			if ($stock->getLimitBottom()) {
 				$stockArray["limitBottom"] = $stock->getLimitBottom();
 			}
 			if ($stock->getLimitTop()) {
 				$stockArray["limitTop"] = $stock->getLimitTop();
 			}
-
-			$stocks[] = $stockArray;
+			$depotArray["stocks"][$stock->getId()] = $stockArray;
 		}
 	
-		return [
-			"title" => $this->getTitle(),
-			"key" => ($this->getShareDepotKey() ? null : $this->getDepotKey()),
-			"sharedKey" => $this->getShareDepotKey(),
-			"currency" => $this->getCurrency(),
-			"loadtime" => $this->getLoadingDuration(),
-			"stocks" => $stocks,
-		];
+		return $depotArray;
 	}
 
 
