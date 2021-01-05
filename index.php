@@ -4,7 +4,7 @@ if (isset($_GET["portfolio_key"])) {
 	header("Location: https://peerfol.io/" . $_GET["portfolio_key"]);
 	die();
 } else if (strlen($_SERVER['REQUEST_URI']) <= 1) {
-	$html = file_get_contents("homepage.html");
+	$html = file_get_contents("content/homepage.html");
 	echo $html;
 } else {
 	$seconds_to_cache = 13600;
@@ -13,7 +13,7 @@ if (isset($_GET["portfolio_key"])) {
 	header("Pragma: cache");
 	header("Cache-Control: max-age=$seconds_to_cache");	
 
-	$html = file_get_contents("test.html");
+	$html = file_get_contents("app.html");
 
 	$cacheInvalidator = "?cache=" . substr(md5(filectime(__DIR__ . "/depot.css") * filectime(__DIR__ . "/depot.js")), 0, 10);
 

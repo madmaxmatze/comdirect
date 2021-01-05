@@ -6,9 +6,6 @@
     var tooltipStockChartUrl = "https://charts.comdirect.de/charts/rebrush/design_small.ewf.chart?WIDTH=256&HEIGHT=173&TIME_SPAN=[TIME]&TYPE=MOUNTAIN&ID_NOTATION=[ID]";
 
     init = function() {
-      $("html") .addClass("loadingFinished")
-                .addClass(depot.sharedKey ? "shareDepot" : "");
-
       var headRow = "<tr>"
           + "<th class='iterator'></th>"
           + "<th class='name'>" + depot.title + "</th>"
@@ -41,7 +38,6 @@
       initTableSorter();
       initMenu();
       initStockContextMenu();
-      $.logDuration(starttime, "table rendered");
     };
 
     fillData = function() {
@@ -489,6 +485,7 @@
     };
 
     loadHistoryData = function () {
+      $.logLoading("Loading History data");
       $.ajax({
         url: "https://peerfol.io/data.php"
         ,data: {
@@ -500,11 +497,14 @@
         ,dataType: "jsonp"
         // ,jsonpCallback: 'historyData'
         ,async: true // not working with jsonp
-        ,success: function(response) {
-          // date loaded
-          prepareDataTable(response);
-          drawChart();
-        }
+      }).done(function(data, textStatus, jqXHR) {
+        prepareDataTable(data);
+        drawChart();
+        $.logLoading("History Chart created");
+      }).fail(function(jqXHR, textStatus, errorThrown) {
+        $element.html("Failure loading history from peerfol.io");
+        $.logLoading("Failure loading history from peerfol.io");
+        console.log (errorThrown);
       });
     };
 
@@ -623,6 +623,13 @@
       }]);
       dataView = new google.visualization.DataView(dataTables[filterStockId]);
       dataView.setRows(dataTableVisibleRowIds);
+      /*
+      if (dataTableVisibleRowIds.length < 3) {
+        $element.html((5 - dataTableVisibleRowIds.length) + " more days of trading data needed before history chart can be shown");
+        return;
+      }
+      */
+      
       chart.draw(dataView, chartOptions);
 
       /* export to image
@@ -1012,9 +1019,16 @@
   });
 
   $.extend({
-    logDuration: function(startTime, stepTitle) {
-      var duration = (new Date()).getTime() - startTime.getTime();
-      console.log (duration + "ms - " + stepTitle);
+    logLoading: function(stepTitle) {
+      if (!window.loaderInfo) {
+        $("body").append("<div class='loaderInfo'><p></p></div>");
+        window.loaderInfo = $(".loaderInfo p")
+      }
+      window.loaderInfo.text(stepTitle)
+      
+      var duration = (new Date()).getTime() - window.starttime.getTime();
+      var logText = stepTitle + " | " + duration + "ms";
+      console.log (logText);
     },
 
     getSelectedControl: function (clickedControl) {
@@ -1158,8 +1172,15 @@
       }
       if (!portfolioKey) {return;}
 
-
       var handleDepotJson = function(depot){
+        $("html") .addClass("loadingFinished")
+                  .addClass(depot.sharedKey ? "shareDepot" : "");
+
+        if (!depot.title) { // invalid
+          $.logLoading("Failure loading from Comdirect");
+          return;
+        }
+       
         if (islocalCachingAllowed) {
           sessionStorage.setItem("cachedDepot", JSON.stringify(depot));
         }
@@ -1233,11 +1254,21 @@
 
         $("head title").text(depot.title);
 
+        $("html").addClass("loadingLoggingFinished");
+        
+        $.logLoading("Rending Table");
+   
         $("#depot_table").depotTable(depot);
+        
+        if (!Object.values(depot.stocks).filter(stock => stock.count > 0).length) {
+          $("#depot_chart_share").html("Please add values and counts to stocks you own to see the peerfol.io analysis");
+          return;
+        }
 
+        $.logLoading("Loading Google Charts Lib");
         google.charts.load("current", {"packages": ["corechart", "treemap", "bar"]});
         google.charts.setOnLoadCallback(function() {
-          $.logDuration(starttime, "chart lib loaded");
+          $.logLoading("Rendering Charts");
 
           $("#depot_chart_share").shareChart(depot);
           $("#depot_chart_history").portfolioHistoryChart(depot);
@@ -1245,10 +1276,11 @@
           $("#depot_chart_dev").depotDevelopmentChart(depot);
           // last 12 months chart: https://developers.google.com/chart/interactive/docs/gallery/calendar
 
-          $.logDuration(starttime, "charts rendered");
+          $.logLoading("Stock Charts created");
         });
       }
 
+      $.logLoading("Loading Data");
       $.ajax({
         url: "https://peerfol.io/data.php"
         ,data : {
@@ -1263,17 +1295,19 @@
           if (islocalCachingAllowed) {
             var cachedDepot = sessionStorage.getItem("cachedDepot");
             if (cachedDepot) {
-              $.logDuration(starttime, "data loaded from cache");
+              $.logLoading("Completed Loading Data");
 
               handleDepotJson($.parseJSON(cachedDepot));
               return false;
             }
           }
         }
-        ,success: function (depot) {
-          $.logDuration(starttime, "data loaded (" + depot.loadtime + "ms server side)");
-          handleDepotJson(depot);
-        }
+      }).done(function(data, textStatus, jqXHR) {
+        $.logLoading("Data loaded | " + data.loadtime + "ms server side");
+        handleDepotJson(data);
+      }).fail(function(jqXHR, textStatus, errorThrown) {
+        $.logLoading("Failure loading from peerfol.io");
+        console.log (errorThrown);
       });
     }
   });
@@ -1282,7 +1316,7 @@
 
 
 $(function() { // main
-  $.logDuration(starttime, "js loaded");
+  $.logLoading("Initializing peerfol.io");
 
   $("html").addClass($.isDarkmode() ? "darkmode" : "lightmode");
 
