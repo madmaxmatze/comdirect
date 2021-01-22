@@ -10,7 +10,7 @@ class CsvExporter {
   
   private function array2csv(array &$array) {
     if (count($array) == 0) {
-     return null;
+      return null;
     }
     ob_start();
     $df = fopen("php://output", 'w');
