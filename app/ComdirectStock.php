@@ -60,6 +60,7 @@ class ComdirectStock{
 
   public function setCount($count){
     $this->count = $count;
+    return $this;
   }
 
   public function getCount(){
@@ -82,6 +83,7 @@ class ComdirectStock{
 
   public function setName($name) {
     $this->name = $name;
+    return $this;
   }
   
   public function getName() {
@@ -90,6 +92,7 @@ class ComdirectStock{
 
   public function setId($id) {
     $this->id = $id;
+    return $this;
   }
 
   public function getId() {
@@ -98,6 +101,7 @@ class ComdirectStock{
 
   public function setWkn($wkn) {
     $this->wkn = $wkn;
+    return $this;
   }
 
   public function getWkn() {
@@ -106,6 +110,7 @@ class ComdirectStock{
 
   public function setSymbol($symbol) {
     $this->symbol = $symbol;
+    return $this;
   }
 
   public function getSymbol() {
@@ -114,6 +119,7 @@ class ComdirectStock{
 
   public function setIsin($isin) {
     $this->isin = $isin;
+    return $this;
   }
 
   public function getIsin() {
@@ -122,6 +128,7 @@ class ComdirectStock{
 
   public function setNote($note){
     $this->note = $note;
+    return $this;
   }
 
   public function getNote(){
@@ -130,6 +137,7 @@ class ComdirectStock{
 
   public function setType($type) {
     $this->type = $type;
+    return $this;
   }
 
   public function getType() {
@@ -141,6 +149,7 @@ class ComdirectStock{
     if ($currency) {
       $this->currency = $currency;
     }
+    return $this;
   }
 
   public function getCurrency() {
@@ -171,6 +180,7 @@ class ComdirectStock{
 
   public function setLimitTop($limit) {
     $this->limitTop = $limit;
+    return $this;
   }
 
   public function getLimitBottom() {
@@ -179,10 +189,12 @@ class ComdirectStock{
 
   public function setLimitBottom($limit) {
     $this->limitBottom = $limit;
+    return $this;
   }
 
   public function setUrl($url) {
     $this->url = $url;
+    return $this;
   }
 
   public function getUrl() {
@@ -192,6 +204,7 @@ class ComdirectStock{
 
   public function setPrice($price) {
     $this->price = $price;
+    return $this;
   }
 
   public function getPrice() {
@@ -200,6 +213,7 @@ class ComdirectStock{
 
   public function setDifferenceAbsolutePerStock($differenceAbsolutePerStock) {
     $this->differenceAbsolutePerStock = $differenceAbsolutePerStock;
+    return $this;
   }
 
   public function getDifferenceAbsolutePerStock() {
@@ -215,6 +229,7 @@ class ComdirectStock{
 
   public function setDifferencePercentage($differencePercentage) {
     $this->differencePercentage = $differencePercentage;
+    return $this;
   }
 
   public function getDifferencePercentage() {
@@ -223,6 +238,7 @@ class ComdirectStock{
 
   public function setTotalValue($totalValue) {
     $this->totalValue = $totalValue;
+    return $this;
   }
 
   public function getTotalValue() {
@@ -239,6 +255,7 @@ class ComdirectStock{
 
   public function setMarket($market) {
     $this->market = $market;
+    return $this;
   }
 
   public function getMarket() {
@@ -247,6 +264,7 @@ class ComdirectStock{
 
   public function setBuyPrice($buyPrice) {
     $this->buyPrice = $buyPrice;
+    return $this;
   }
 
   public function getBuyPrice() {
@@ -255,6 +273,7 @@ class ComdirectStock{
 
   public function setBuyDate($buyDate) {
     $this->buyDate = $buyDate;
+    return $this;
   }
 
   public function getBuyDate() {
@@ -263,6 +282,7 @@ class ComdirectStock{
   
   public function setTotalBuyValue($totalBuyValue) {
     $this->totalBuyValue = $totalBuyValue;
+    return $this;
   }
 
   public function getTotalBuyValue() {
@@ -271,6 +291,7 @@ class ComdirectStock{
 
   public function setDate($date) {
     $this->date = $date;
+    return $this;
   }
 
   public function getDate() {

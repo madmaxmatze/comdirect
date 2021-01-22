@@ -1,8 +1,6 @@
-// module pattern: https://www.smashingmagazine.com/2011/10/essential-jquery-plugin-patterns/
-
-(function($) { // Depot Table
+;(function($) { // Depot Table
   var DepotTable = (function($element, depot) {
-    var visitedPortfolioKeys = JSON.parse(localStorage.getItem("portfoliokeys"));
+    var visitedPortfolioKeys = JSON.parse(localStorage.getItem("portfoliokeys")) || {};
     var tooltipStockChartUrl = "https://charts.comdirect.de/charts/rebrush/design_small.ewf.chart?WIDTH=256&HEIGHT=173&TIME_SPAN=[TIME]&TYPE=MOUNTAIN&ID_NOTATION=[ID]";
 
     init = function() {
@@ -83,7 +81,9 @@
               + "<span>" + $.formatNumber(stock.priceDiffPer, "%", 1) + "</span>"
             + "</td>"
             + "<td class='valueDiffAbsToday'" + $.getStyleColorForNumber(stock.priceDiffPer * 100) + ">"
-              + "<span>" + (stock.count ? $.formatNumber(stock.valueDiffAbsToday, depot.currency) : sortingZero) + "</span>"
+              + "<span>"
+                + (stock.count ? $.formatNumber(stock.valueDiffAbsToday, depot.currency) : sortingZero)
+              + "</span>"
             + "</td>"
             + "<td class='valueDiffPer'" + $.getStyleColorForNumber(stock.valueDiffPer) + ">"
               + (stock.count ? $.formatNumber(stock.valueDiffPer, "%") : sortingZero)
@@ -125,6 +125,13 @@
       }
 
       var footerFields = $element.find("> table > tfoot > tr > th");
+      if (depot.isDataOld) {
+        footerFields.filter(".name").html(
+          depot.isDataFromToday ? 
+            " <span style='background: #DDD'>" + $.formatDuration(depot.dateAge) + " old data</span>": 
+            " <span style='background: red'>" + depot.date.toISOString().replace(/[A-Z]+/ig, " ").substr(0, 19) + "</span>"
+        );
+      }
       footerFields.filter(".buyDate").html($.formatDuration(buyDateAgeAverage));
       footerFields.filter(".buyValue").html("<span" + (depot.sharedKey ? " class='shareDepotLabel'" : "") + ">"
                                               + $.formatNumber(buyValue, depot.currency, 0) + "</span>");
@@ -142,23 +149,33 @@
     initMenu = function() {
       var html = "";
 
-      if (depot.key) {
+      if (depot.key) {     
         html += "<p>"
                   + "Comdirect: "
-                  + "<a href='http://www.comdirect.de/inf/musterdepot/pmd/freunde.html?portfolio_key=" + depot.key + "&SORT=PROFIT_LOSS_POTENTIAL_CURRENCY_PORTFOLIO_PCT&SORTDIR=ASCENDING' target='_blank'>Open</a> | "
-                  + "<a href='https://nutzer.comdirect.de/inf/musterdepot/pmd/meineuebersicht.html?name=" + depot.title + "' target='_blank'>Edit</a> </p>"
+                  + "<a href='http://www.comdirect.de/inf/musterdepot/pmd/freunde.html?portfolio_key=" + depot.key
+                    + "&SORT=PROFIT_LOSS_POTENTIAL_CURRENCY_PORTFOLIO_PCT&SORTDIR=ASCENDING' target='_blank'>Open</a>"
+                  + " | "
+                  + "<a href='https://nutzer.comdirect.de/inf/musterdepot/pmd/meineuebersicht.html?name=" + depot.title
+                    + "' target='_blank'>Edit</a>"
                 + "</p>"
                 + "<p>"
                   + "<a href='/s" + depot.key.substring(0, 12) + "' target='_blank'>Share 1k-Peerfolio</a>"
+                + "</p>"
+                + "<p>"
+                  + "<a href='/api/v1/stocks?format=csv&portfolio_key=" + depot.key
+                    + (depot.isDataFromToday ? "" : "&date=" + depot.date.toISOString().split('T')[0])
+                    + "' target='_blank'>Export</a>"
                 + "</p>";
       }
 
       if (visitedPortfolioKeys && Object.keys(visitedPortfolioKeys).length > 1) {
         html += "Recently visited:"
                 + "<ul>"
-                  + Object.keys(visitedPortfolioKeys).reduce(function(prevVal, key) {
-                      return prevVal + (key && visitedPortfolioKeys[key] ? "<li><a href='/" + key + "'>" + visitedPortfolioKeys[key] + "</a></li>" : "");
-                    }, '')
+                  + Object.keys(visitedPortfolioKeys).reduce((prevVal, key) => {
+                    return prevVal + (key && visitedPortfolioKeys[key] ? "<li>"
+                      + (key.charAt() == "s" ? "<span class='shareDepotLabel'>1k</span> " : "")
+                      + "<a href='/" + key + "'>" + visitedPortfolioKeys[key] + "</a></li>" : "");
+                  }, '')
                 + "</ul>";
       }
 
@@ -171,24 +188,38 @@
           },
           style: {classes: "menu-tooltip"},
           position: {
-            my: "top right",
-            at: "top right"
+            my: "top right"
+            ,at: "bottom right"
+            ,adjust: {
+              y: -8
+            }
           },
           show: {
             event: "click",
             solo: true,
-            delay: 1
+            delay: 1,
+            effect: function(offset) {
+              $(this).slideDown(300);
+            }
           },
           hide: {
+            inactive: 4000,
             fixed: true,
-            delay: 300
+            delay: 300,
+            event: 'click mouseleave'
+          },
+          events: {
+            toggle: function(event, api) {
+              $(api.elements.target).toggleClass("menuOpen", (event.type === 'tooltipshow')); 
+            }
           }
         });
       }
     };
 
     initTableSorter = function () {
-      var sortColumnNumber = $element.find("> table > tfoot > tr > th.valueDiffAbs").addClass("sortcolumn headerSortUp").prevAll().length;
+      var sortColumnNumber = $element.find("> table > tfoot > tr > th.valueDiffAbs")
+                                    .addClass("sortcolumn headerSortUp").prevAll().length;
 
       $element.children("table").tablesorter({
         sortList: [[sortColumnNumber,0], [1,0]]
@@ -201,7 +232,7 @@
           ,filter_external : ".search"
           // filter_saveFilters : true,
         }
-        ,usNumberFormat: false
+        ,usNumberFormat: ((1.1).toLocaleString(navigator.language || navigator.userLanguage).substr(1,1) == ".")
         ,headers: [
           { sorter: false }
         ]
@@ -216,22 +247,28 @@
 
         var html = "<p>"
           + "<span class='price'>" + $.formatNumber(stock.price, stock.currency, 2) + "</span>"
-          + " <span class='priceDiffAbs'" + $.getStyleColorForNumber(stock.priceDiffPer * 100) + ">" + $.formatNumber(stock.priceDiffAbs, stock.currency, 2, true) + "</span>"
+          + " <span class='priceDiffAbs'" + $.getStyleColorForNumber(stock.priceDiffPer * 100) + ">"
+            + $.formatNumber(stock.priceDiffAbs, stock.currency, 2, true)
+          + "</span>"
           + (typeof stock.priceDiffPer !== "undefined" ?
-            " <span class='priceDiffPer'" + $.getStyleColorForNumber(stock.priceDiffPer * 100) + ">" + $.formatNumber(stock.priceDiffPer, "%", null, true) + "</span>"
+            " <span class='priceDiffPer'" + $.getStyleColorForNumber(stock.priceDiffPer * 100) + ">"
+              + $.formatNumber(stock.priceDiffPer, "%", null, true)
+            + "</span>"
             : "")
           + (stock.limitBottom || stock.limitTop ?
               "<br>"
-              + (stock.limitBottom ? "<span" + (stock.isBelowLimit ? " class='alert'" : "") + ">" + $.formatNumber(stock.limitBottom, stock.currency, 2) + " < </span>" : "")
+              + (stock.limitBottom ? "<span" + (stock.isBelowLimit ? " class='alert'" : "") + ">"
+                  + $.formatNumber(stock.limitBottom, stock.currency, 2) + " < </span>" : "")
               + "Limit"
-              + (stock.limitTop ? "<span" + (stock.isAboveLimit ? " class='alert'" : "") + "> > " + $.formatNumber(stock.limitTop, stock.currency, 2) + "</span>" : "")
+              + (stock.limitTop ? "<span" + (stock.isAboveLimit ? " class='alert'" : "") + "> > "
+                  + $.formatNumber(stock.limitTop, stock.currency, 2) + "</span>" : "")
             : "")
         + "</p>";
 
         if (stock.count) {
           html += "<p>"
-            + "Diff Today: <span class='valueDiffAbsToday'" + $.getStyleColorForNumber(stock.valueDiffAbsToday) + ">" +
-              $.formatNumber(stock.valueDiffAbsToday, depot.currency, 2)
+            + "Diff Today: <span class='valueDiffAbsToday'" + $.getStyleColorForNumber(stock.valueDiffAbsToday) + ">"
+              + $.formatNumber(stock.valueDiffAbsToday, depot.currency, 2)
             + "</span>"
           + "</p>"
 
@@ -258,28 +295,57 @@
         + "</p>"
 
         + "<p>"
-          + "<a href='https://www.comdirect.de/inf/aktien/detail/uebersicht.html?ID_NOTATION=" + stock.comdirectId + "' target='_blank'><img src='https://lh3.ggpht.com/oDdHm6AlrMpjCIazyHQVzeEIcH28_7RSi7CGTUFz629aV6t0M2nAmHG93ZhSJqifGtw=w32' width='32' /></a> "
+          + "<a href='https://www.comdirect.de/inf/aktien/detail/uebersicht.html?ID_NOTATION=" + stock.comdirectId
+            + "' target='_blank'>"
+            + "<img src='https://lh3.ggpht.com/oDdHm6AlrMpjCIazyHQVzeEIcH28_7RSi7CGTUFz629aV6t0M2nAmHG93ZhSJqifGtw=w32' "
+            + "width='32' />"
+          + "</a> "
           + (stock.isin ?
-            "<a href='https://aktie.traderfox.com/visualizations/" + stock.isin + "' target='_blank'><img src='https://pbs.twimg.com/profile_images/797361743626465280/eAhqkp1P_400x400.jpg' width='32' /></a> "
-            + "<a href='http://markets.businessinsider.com/searchresults?_search=" + stock.isin + "' target='_blank'><img src='https://i.insider.com/596e4e7a552be51d008b50fd?width=600&format=jpeg&auto=webp' width='32' /></a> "
-            + "<a href='http://m.ariva.de/search/search.m?searchname=" + stock.isin + "' target='_blank'><img src='https://pbs.twimg.com/profile_images/435793734886645760/TmtKTE6Y.png' width='32' /></a> "
-            + "<a href='https://www.onvista.de/aktien/" + stock.isin + "' target='_blank'><img src='https://s.onvista.de/css-69545/web/portal/nl/layout_img/favicon.png' width='32' /></a> "
-            + "<a href='http://www.finanzen.net/suchergebnis.asp?_search=" + stock.isin + "' target='_blank'><img src='https://images.finanzen.net/images/favicon/favicon-32x32.png' width='32' /></a> "
-            + "<a href='https://www.consorsbank.de/euroWebDe/-?$part=Home.security-search&$event=search&pattern=" + stock.isin + "' target='_blank'><img src='https://www.consorsbank.de/content/dam/de-cb/system/images/evr/favicon.ico' width='32' /></a> "
+            "<a href='https://aktie.traderfox.com/visualizations/" + stock.isin + "' target='_blank'>"
+              + "<img src='https://pbs.twimg.com/profile_images/797361743626465280/eAhqkp1P_400x400.jpg' width='32' />"
+            + "</a> "
+            + "<a href='http://markets.businessinsider.com/searchresults?_search=" + stock.isin + "' target='_blank'>"
+              + "<img src='https://i.insider.com/596e4e7a552be51d008b50fd?width=600&format=jpeg&auto=webp' width='32' />"
+            + "</a> "
+            + "<a href='http://m.ariva.de/search/search.m?searchname=" + stock.isin + "' target='_blank'>"
+              + "<img src='https://pbs.twimg.com/profile_images/435793734886645760/TmtKTE6Y.png' width='32' />"
+            + "</a> "
+            + "<a href='https://www.onvista.de/aktien/" + stock.isin + "' target='_blank'>"
+              + "<img src='https://s.onvista.de/css-69545/web/portal/nl/layout_img/favicon.png' width='32' />"
+            + "</a> "
+            + "<a href='http://www.finanzen.net/suchergebnis.asp?_search=" + stock.isin + "' target='_blank'>"
+              + "<img src='https://images.finanzen.net/images/favicon/favicon-32x32.png' width='32' />"
+            + "</a> "
+            + "<a href='https://www.consorsbank.de/euroWebDe/-?$part=Home.security-search&$event=search"
+              + "&pattern=" + stock.isin + "' target='_blank'>"
+              + "<img src='https://www.consorsbank.de/content/dam/de-cb/system/images/evr/favicon.ico' width='32' />"
+            + "</a> "
             : "")
           + (stock.symbol ?
-             "<a href='https://finance.yahoo.com/quote/" + stock.symbol + "' target='_blank'><img src='https://finance.yahoo.com/favicon.ico' width='32' /></a> "
-             + "<a href='https://www.google.de/search?tbm=fin&q=" + stock.symbol + "' target='_blank'><img src='https://www.google.de/images/branding/product/ico/googleg_lodp.ico' width='32' /></a> "
+            "<a href='https://finance.yahoo.com/quote/" + stock.symbol + "' target='_blank'>"
+              + "<img src='https://finance.yahoo.com/favicon.ico' width='32' />"
+            + "</a> "
+            + "<a href='https://www.google.de/search?tbm=fin&q=" + stock.symbol + "' target='_blank'>"
+              + "<img src='https://www.google.de/images/branding/product/ico/googleg_lodp.ico' width='32' />"
+            + "</a> "
             : "")
           + (stock.isin && stock.type == "ETF" ?
-             "<a href='https://www.justetf.com/de/etf-profile.html?isin=" + stock.isin + "' target='_blank'><img src='https://www.justetf.com/images/logo/justetf_icon_m.png' width='32' /></a> "
-             + "<a href='https://de.extraetf.com/etf-profile/" + stock.isin + "' target='_blank'><img src='https://de.extraetf.com/favicon.ico' width='32' /></a> "
-             + "<a href='https://www.trackingdifferences.com/ETF/ISIN/" + stock.isin + "' target='_blank'><img src='https://www.trackingdifferences.com/images/favicon-32.png' width='32' /></a> "
+              "<a href='https://www.justetf.com/de/etf-profile.html?isin=" + stock.isin + "' target='_blank'>"
+                + "<img src='https://www.justetf.com/images/logo/justetf_icon_m.png' width='32' />"
+              + "</a> "
+              + "<a href='https://de.extraetf.com/etf-profile/" + stock.isin + "' target='_blank'>"
+                + "<img src='https://de.extraetf.com/favicon.ico' width='32' />"
+              + "</a> "
+              + "<a href='https://www.trackingdifferences.com/ETF/ISIN/" + stock.isin + "' target='_blank'>"
+                + "<img src='https://www.trackingdifferences.com/images/favicon-32.png' width='32' />"
+              + "</a> "
             : "")
           + (stock.wkn && stock.type == "Stock" ?
-            "<a href='http://www.finanznachrichten.de/suche/suchergebnis.asp?words=" + stock.wkn + "' target='_blank'><img src='https://fns1.de/g/fb.png' width='32' /></a> "
+              "<a href='http://www.finanznachrichten.de/suche/suchergebnis.asp?words=" + stock.wkn + "' target='_blank'>"
+                + "<img src='https://fns1.de/g/fb.png' width='32' />"
+              + "</a> "
             : "")
-          + "<div class='chart'>"
+          + "<div class='chartContainer'>"
             + "<div class='controls'><a class='active'>10d</a> <a>6m</a> <a>1y</a> <a>5y</a> <a>max</a></div>"
             + "<img src='" + tooltipStockChartUrl.replace("[TIME]", "10D").replace("[ID]", stock.comdirectId) + "' />"
           + "</div>"
@@ -315,7 +381,7 @@
                 var src = tooltipStockChartUrl
                             .replace("[TIME]", clickedLink.text().replace("max", "SE").toUpperCase())
                             .replace("[ID]", stock.comdirectId);
-                var img = clickedLink.parent().parent().find("img").attr("src", src);
+                clickedLink.parent().parent().find("img").attr("src", src);
               });
             }
           }
@@ -324,16 +390,11 @@
     };
 
     storePortfolioKey = function () {
-      // save all portfolios
-      if (!visitedPortfolioKeys) {
-        visitedPortfolioKeys = {};
-      }
-
       if (depot.sharedKey) {
-        visitedPortfolioKeys[depot.sharedKey] = depot.title + " (Public 1k)";
+        visitedPortfolioKeys[depot.sharedKey] = depot.title;
 
         // remove sharedKey if key already exists
-        if (JSON.stringify(visitedPortfolioKeys).search("\"" + depot.sharedKey.substr(1)) > 0) {
+        if (Object.keys(visitedPortfolioKeys).some(key => (key && key.startsWith(depot.sharedKey.substr(1))))) {
           delete visitedPortfolioKeys[depot.sharedKey];
         }
       } else if (depot.key) {
@@ -361,9 +422,21 @@
 (function($) { // PortfolioHistoryChart
   var PortfolioHistoryChart = (function($element, depot) {
     var dataTables = [];
+    var dataTableTemplate = {cols: [
+         {type: "date", label: "Date"}
+        ,{type: "string", role: "tooltip", p: {"html": true}}
+        ,{type: "number", label: "GreyArea"}
+        ,{type: 'string', role: 'annotation'}
+        ,{type: "number", label: "GreenArea"}
+        ,{type: "number", label: "RedArea"}
+        ,{type: "number", label: "AbsLine"}
+        ,{type: "string", role: "style"}  // line style
+        ,{type: "number", label: "PercLine"}
+        ,{type: "string", role: "style"}  // line style
+    ]};
     var dataView = null;
     var filterStockId = 0;
-    var duration = 184;
+    var duration = 90;
     var chart = null;
     var chartOptions = {
       width: "100%"
@@ -400,8 +473,15 @@
         }
       ]
       ,annotations: {
-        textStyle: {
-          fontSize: 8
+        datum : {
+          stem : {
+            length : 2
+            ,color : "transparent"
+          }
+        }
+        ,style: "point"
+        ,textStyle: {
+          fontSize: 14
           ,color: "#000000"
           ,auraColor: "#FFFFFF"
         }
@@ -432,14 +512,12 @@
         ,{
           targetAxisIndex: 1   // right axis percentage
           ,type: "line"
-          ,lineWidth: 1
+          ,lineWidth: 2
         }
       ]
     };
 
     init = function() {
-      drawChart();
-
       if ($("html").hasClass("darkmode")) {
         chartOptions.hAxis.textStyle.color = "#DDD";
         chartOptions.vAxes[0].textStyle.color = "#DDD";
@@ -455,17 +533,15 @@
         chartOptions.series[4].lineWidth = 2;
       }
 
-      $(window).on("resizeEnd", drawChart);
-
-      $element.append("<div></div>"
+      $element.append("<div class='chart'></div>"
        + "<div class='history_info'></div>"
-       // <a data-duration='31'>1m</a> <a data-duration='184'>6m</a> <a data-duration='365'>1y</a> 
        + "<div class='controls'>"
         + "<select id='duration_filter'>"
-          + "<option value='31'>1m</option>"
-          + "<option value='184' selected='selected'>6m</option>"
+          + "<option value='7'>7d</option>"
+          + "<option value='30'>1m</option>"
+          + "<option value='90' selected='selected'>3m</option>"
+          + "<option value='180'>6m</option>"
           + "<option value='365'>1y</option>"
-          + "<option value='100000'>max</option>"
         + "</select>"
         + "<select id='stock_filter'>"
           + "<option value='0'>All</option>"
@@ -475,23 +551,31 @@
        + "</div>"
       );
 
+      chart = new google.visualization.ComboChart($element.find(".chart")[0]);
+      // just to block the space
+      chart.draw(new google.visualization.DataTable(dataTableTemplate), chartOptions);
+
+      $(window).on("resizeEnd", drawChart);
+      drawChart();
+
       $element.find("select").on("change", function() {
         duration = $("#duration_filter").val();
         filterStockId = $("#stock_filter").val();
         drawChart();
       });
-
-      chart = new google.visualization.ComboChart($element.find("div")[0]);
     };
 
     loadHistoryData = function () {
-      $.logLoading("Loading History data");
       $.ajax({
-        url: "https://peerfol.io/data.php"
+        url: "https://peerfol.io/api/v1/history"
         ,data: {
-          type : "history"
-          ,portfolio_key : (depot.key ? depot.key : depot.sharedKey)
+          portfolio_key : (depot.key ? depot.key : depot.sharedKey)
           ,filterStockId : filterStockId
+          ,date : (new URL(window.location)).searchParams.get("date")
+        }
+        ,beforeSend: function( xhr ) {
+          $.logLoading("Loading History data");
+          $element.addClass("spinner");
         }
         ,jsonp: "wrapper"
         ,dataType: "jsonp"
@@ -505,36 +589,29 @@
         $element.html("Failure loading history from peerfol.io");
         $.logLoading("Failure loading history from peerfol.io");
         console.log (errorThrown);
+      }).always(function(jqXHR, textStatus, errorThrown){
+        $element.removeClass("spinner");
       });
     };
 
     prepareDataTable = function(response){
       filterStockId = response.stockFilterUsed;
+      dataTables[filterStockId] = new google.visualization.DataTable(dataTableTemplate);
 
-      dataTables[filterStockId] = new google.visualization.DataTable(
-        {cols: [
-           {type: "date", label: "Date"}
-          ,{type: "string", role: "tooltip", p: {"html": true}}
-          ,{type: "number", label: "GreyArea"}
-          ,{type: "number", label: "GreenArea"}
-          ,{type: "number", label: "RedArea"}
-          ,{type: "number", label: "AbsLine"}
-          ,{type: "string", role: "style"}  // line style
-          ,{type: "number", label: "PercLine"}
-          ,{type: "string", role: "style"}  // line style
-      ]});
-
+      var lastDiff;
       var rows = Object.keys(response.rows).map(dateString => {
         var date = new Date(dateString);
-        date.setHours(0, -date.getTimezoneOffset(), 0, 0);  //removing the timezone offset
+        // date.setHours(0, -date.getTimezoneOffset(), 0, 0);  //removing the timezone offset
         var value = response.rows[dateString][0];
         var diff = response.rows[dateString][1];
         var count = response.rows[dateString][2];
+        var isSignsChanging = (lastDiff && lastDiff < 0) ? (diff >= 0) : (diff < 0);
+        lastDiff = diff;
 
         return [
           date
           ,$.getPnlTable({
-            headline : date.toISOString().substr(0, 10) + ", " + $.getWeekday(date)
+            headline : date.toISOString().substr(0, 16).replace("T", ", ") + ", " + $.getWeekday(date)
             ,valueCurrency : "€"
             ,valueStart : (value - diff)
             ,valueEnd : value
@@ -542,12 +619,13 @@
             ,priceStart : (count ? (value - diff) / count : null)
           })
           ,(value - Math.max(diff, 0))                    // gray
+          ,"" // ⬆ ⬇
           ,Math.max(diff, 0)                              // green
           ,Math.abs(Math.min(diff, 0))                    // red
           ,value                                          // Abs Line
-          ,"color:" + (diff > 0 ? "#99AA99" : "#FFCCCC")  // absLineStyle
+          ,"color:" + (isSignsChanging ? "#CCC" : (diff < 0 ? "#FFCCCC" : "#99AA99"))  // absLineStyle
           ,diff / (value - diff)                          // percLine
-          ,"color:" + (diff > 0 ? "green" : "red")        // percLineStyle
+          ,"color:" + (isSignsChanging ? "#888" : (diff < 0 ? "red" : "green"))        // percLineStyle
         ];
       });
       dataTables[filterStockId].addRows(rows);
@@ -563,10 +641,14 @@
         var minYear = dateRange.min.getFullYear();
         var maxYear = dateRange.max.getFullYear();
         if (minYear != maxYear) {
+          $("#duration_filter").append("<optgroup label='---'></optgroup>");
+         
           // $element.find("select").show();
           for (y = minYear; y <= maxYear; y+=1) {
             $("#duration_filter").append("<option value='" + y + "'>" + y + "</option>");
           }
+
+          $("#duration_filter").append("<option value='100000'>max</option>");
         }
       }
 
@@ -584,21 +666,46 @@
       var sumBuyValue = 0;
       var sumValue = 0;
       dataTableVisibleRowIds.forEach(function(rowId) {
-        endProfit = dataTables[filterStockId].getValue(rowId, 3) - dataTables[filterStockId].getValue(rowId, 4); // profit - loss
-        if (startProfit === null) {
-          startProfit = endProfit;
-        }
-        sumBuyValue += dataTables[filterStockId].getValue(rowId, 2) + dataTables[filterStockId].getValue(rowId, 4); // value + loss
-        sumValue += dataTables[filterStockId].getValue(rowId, 2) + dataTables[filterStockId].getValue(rowId, 3) + dataTables[filterStockId].getValue(rowId, 4); // value + loss + profit
+        endProfit = dataTables[filterStockId].getValue(rowId, 3) - dataTables[filterStockId].getValue(rowId, 4);
+        startProfit = startProfit || endProfit;
+        sumBuyValue += dataTables[filterStockId].getValue(rowId, 2) + dataTables[filterStockId].getValue(rowId, 4);
+        sumValue += dataTables[filterStockId].getValue(rowId, 2) + dataTables[filterStockId].getValue(rowId, 3)
+                    + dataTables[filterStockId].getValue(rowId, 4); // value + loss + profit
       });
 
+      var buyValueProfit = (endProfit - startProfit) / (sumBuyValue / dataTableVisibleRowIds.length) * 100;
       $element.find(" > div:nth-child(2)").html(
         "<b>Ø BuyValue</b> " + $.formatNumber(sumBuyValue / dataTableVisibleRowIds.length, "€")
         + " | <b>Ø Value</b> " + $.formatNumber(sumValue / dataTableVisibleRowIds.length, "€")
         + " | <b>Profit</b> " + $.formatNumber(endProfit - startProfit, "€", 0, true)
-        + " | <b>Profit/BuyValue</b> " + $.formatNumber((endProfit - startProfit) / (sumBuyValue / dataTableVisibleRowIds.length) * 100, "%", null, true)
+        + " | <b>Profit/BuyValue</b> " + $.formatNumber(buyValueProfit, "%", null, true)
         + " (excl. realised profit)"
       );
+    };
+
+    getVisibleRowIds = function() {
+      var filter = {
+        column: 0
+      };
+
+      var maxPointsPerDay = {7:24, 30:3}[duration] || 1;
+      filter.test = (value, rowId, columnId, datatable) => {
+        return rowId == datatable.getNumberOfRows() - 1
+          || !$.isSameDay(value, datatable.getValue(rowId + 1, columnId))
+          // reduce # of datapoints per day
+          || Math.floor(value.getHours() / (24 / maxPointsPerDay)) != Math.floor(datatable.getValue(rowId + 1, columnId).getHours() / (24 / maxPointsPerDay))
+        ;
+      }
+  
+      if (duration > 2000 && duration < 2100) {     // a year
+        filter.minValue = new Date(duration, 0, 1);
+        filter.maxValue = new Date(duration, 11, 31, 23, 59, 59);
+      } else {                                      // # of days
+        filter.minValue = new Date();
+        filter.minValue.setDate((new Date()).getDate() - duration);
+      }
+
+      return dataTables[filterStockId].getFilteredRows([filter]);
     };
 
     drawChart = function() {
@@ -606,30 +713,10 @@
         loadHistoryData();
         return;
       }
-      
-      var minDate = new Date().setDate((new Date()).getDate() - duration);
-      var maxDate = new Date();
 
-      if (duration > 1000 && duration < 3000) {     // a year
-        minDate = new Date(duration, 0, 1);
-        maxDate = new Date(duration, 11, 31, 23, 59, 59);
-      }
-
-      // filter fo date range
-      var dataTableVisibleRowIds = dataTables[filterStockId].getFilteredRows([{
-        column: 0
-        ,minValue: minDate
-        ,maxValue: maxDate
-      }]);
+      var visibleRowIds = getVisibleRowIds();
       dataView = new google.visualization.DataView(dataTables[filterStockId]);
-      dataView.setRows(dataTableVisibleRowIds);
-      /*
-      if (dataTableVisibleRowIds.length < 3) {
-        $element.html((5 - dataTableVisibleRowIds.length) + " more days of trading data needed before history chart can be shown");
-        return;
-      }
-      */
-      
+      dataView.setRows(visibleRowIds);
       chart.draw(dataView, chartOptions);
 
       /* export to image
@@ -638,7 +725,7 @@
       });
       */
 
-      updateStatsBelowChart(dataTableVisibleRowIds);
+      updateStatsBelowChart(visibleRowIds);
     };
 
     init();
@@ -725,7 +812,8 @@
       prepData();
       $(window).on("resizeEnd", drawBarChart);
 
-      $element.html("<div style='padding-top:13px'></div> <div class='controls'><a>total</a> <a>abs</a> <a>rel</a></div>");
+      $element.html("<div style='padding-top:13px' class='chart'></div> " + 
+                    "<div class='controls'><a>total</a> <a>abs</a> <a>rel</a></div>");
       $element.find("a").click(function (clickedLink) {
         clickedLink = $.getSelectedControl(clickedLink);
         sortColumn = clickedLink.prevAll().length;
@@ -736,16 +824,16 @@
     prepData = function () {
       dataTable = new google.visualization.DataTable({
         cols: [
-           {type: "number", label: "absSort"}
-          ,{type: "number", label: "relSort"}
-          ,{type: "number", label: "totalSort"}
-          ,{type: "string", label: "Name"}
+          {type: "string", label: "Name"}
           ,{type: "string", role: "tooltip", p: {"html": true}}
           ,{type: "number", label: "Gray"}
           ,{type: "number", label: "Green"}
           ,{type: "string", role: "style"}
           ,{type: "string", role: "annotation"}
           ,{type: "number", label: "Red"}
+          ,{type: "number", label: "absSort"}
+          ,{type: "number", label: "relSort"}
+          ,{type: "number", label: "totalSort"}
       ]});
 
       dataTable.addRows(
@@ -763,16 +851,16 @@
           });
 
           return [
-            stock.value                                 // FOR TOTAL SORTING
-            ,stock.valueDiffAbs                         // FOR ABS SORTING
-            ,stock.valueDiffPer                         // FOR REL SORTING
-            ,stock.name                                 // label
+            stock.name                                  // label
             ,tooltipHtml                                // tooltip
             ,Math.min(stock.value, stock.buyValue)      // gray
             ,Math.max(0, stock.valueDiffAbs)            // green
             ,"color:" + (stock.valueDiffPer > 1 ? "#007700" : (stock.valueDiffPer < -1 ? "#FF0000" : "#777777"))
             ,$.formatNumber(stock.valueDiffPer, "%", null, true) // annotation
             ,Math.max(0, stock.valueDiffAbs * -1)       // red
+            ,stock.value                                // FOR TOTAL SORTING
+            ,stock.valueDiffAbs                         // FOR ABS SORTING
+            ,stock.valueDiffPer                         // FOR REL SORTING
           ];
         })
       ); 
@@ -782,10 +870,10 @@
 
     drawBarChart = function() {
       chartOptions.height = dataView.getNumberOfRows() * 20 + 80;
-      dataView.setRows(dataTable.getSortedRows({column: sortColumn}));
-      dataView.hideColumns([0,1,2]); // remove sort columns
+      dataView.setRows(dataTable.getSortedRows({column: sortColumn + 7}));
+      dataView.hideColumns([7,8,9]); // remove sort columns
 
-      var chart = new google.visualization.BarChart($element.find("div:first")[0]);
+      var chart = new google.visualization.BarChart($element.find(".chart")[0]);
       chart.draw(dataView, chartOptions);
     };
 
@@ -830,13 +918,13 @@
     };
 
     init = function() {
-      $element.html("<div></div><div class='controls'><a>today</a>| <a>total</a> <a>type</a></div>");
+      $element.html("<div class='chart'></div><div class='controls'><a>today</a>| <a>total</a> <a>type</a></div>");
 
       prepareTreeDataTables();
 
       $(window).on("resizeEnd", drawTreeChart);
 
-      chart = new google.visualization.TreeMap($element.find("div:first")[0]);
+      chart = new google.visualization.TreeMap($element.find(".chart")[0]);
       google.visualization.events.addListener(chart, "select", function () {
         chart.setSelection([]);
       });
@@ -907,15 +995,13 @@
         ]);
 
         // collect typechart data
-        if (!typeData[stock.type]) {
-          typeData[stock.type] = {"value":0, "diff":0};
-        }
+        typeData[stock.type] = typeData[stock.type] || {"value":0, "diff":0};
         typeData[stock.type].value += stock.value;
         typeData[stock.type].diff += stock.valueDiffAbs;
       });
 
       dataTables[2].addRows(
-        Object.keys(typeData).map(function (type) {
+        Object.keys(typeData).map(type => {
           var share = typeData[type].value / depot.value * 100;
           var diffPer = typeData[type].diff / (typeData[type].value - typeData[type].diff) * 100;
           return [
@@ -986,10 +1072,11 @@
       clickedLink = $.getSelectedControl(clickedLink);
 
       $element.find("img").fadeOut("fast", function () {
-        var src = "https://charts.comdirect.de/charts/rebrush/design_large.chart?TYPE=CONNECTLINE&TIME_SPAN=TIMEPLACEHOLDER&AXIS_SCALE=log&DATA_SCALE=rel&LNOTATIONS=IDPLACEHOLDER&LCOLORS=COLORPLACEHOLDER&AVGTYPE=simple&HCMASK=3&SHOWHL=0"
-                    .replace("TIMEPLACEHOLDER", clickedLink.text().replace("max", "SE").toUpperCase())
-                    .replace("IDPLACEHOLDER", top10stocks.map(stock => stock.comdirectId).join("+"))
-                    .replace("COLORPLACEHOLDER", colors.join("+"));
+        var src = "https://charts.comdirect.de/charts/rebrush/design_large.chart?TYPE=CONNECTLINE"
+                    + "&AXIS_SCALE=log&DATA_SCALE=rel&AVGTYPE=simple&HCMASK=3&SHOWHL=0"
+                    + "&TIME_SPAN=" + clickedLink.text().replace("max", "SE").toUpperCase()
+                    + "&LNOTATIONS=" + top10stocks.map(stock => stock.comdirectId).join("+")
+                    + "&LCOLORS=" + colors.join("+");
         $(this).attr("src", src).fadeIn("fast");
       });
     }).first().click();
@@ -1020,12 +1107,7 @@
 
   $.extend({
     logLoading: function(stepTitle) {
-      if (!window.loaderInfo) {
-        $("body").append("<div class='loaderInfo'><p></p></div>");
-        window.loaderInfo = $(".loaderInfo p")
-      }
-      window.loaderInfo.text(stepTitle)
-      
+      $(".loaderInfo p").text(stepTitle)
       var duration = (new Date()).getTime() - window.starttime.getTime();
       var logText = stepTitle + " | " + duration + "ms";
       console.log (logText);
@@ -1079,10 +1161,17 @@
       return diffsFormated.slice(0, 2).join(" ");
     },
 
+    isSameDay: function(date1, date2) {
+      return (date1 && date2
+        && date1.getFullYear() === date2.getFullYear()
+        && date1.getMonth() === date2.getMonth()
+        && date1.getDate() === date2.getDate());
+    },
+
     formatNumber: function (number, type, decimals, includeSign) {
       if (!number) {
         number = 0;
-        decimals = (decimals ? decimals : 0);
+        decimals = decimals || 0;
       }
 
       /*
@@ -1097,12 +1186,14 @@
       }
       decimals = Math.min(decimals, 2);
 
-      var formatOptions = {
-        maximumFractionDigits : decimals,
-        minimumFractionDigits : decimals
-      };
+      var formatter = new Intl.NumberFormat(
+        (navigator.language || navigator.userLanguage)
+        ,{
+          minimumFractionDigits : decimals
+          ,maximumFractionDigits : decimals
+        }
+      );
 
-      var formatter = new Intl.NumberFormat("de-DE", formatOptions);
       return  (includeSign && number > 0 ? "+" : "")
           + formatter.format(number)
           + (type === "percent" || type === "%" ? "%" : "")
@@ -1152,7 +1243,8 @@
 
     isDarkmode: function () {
       var url = new URL(window.location);
-      return (url.searchParams.get("dark") || window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      return (url.searchParams.get("dark") ||
+              window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
     }
   });
 })(jQuery);
@@ -1163,21 +1255,21 @@
   $.extend({
     initDepot: function () {
       var url = new URL(window.location);
-      var portfolioKey = url.searchParams.get("portfolio_key");
+      var dateParam = url.searchParams.get("date");
       var islocalCachingAllowed = url.searchParams.get("cache");
-
+      var portfolioKey = url.searchParams.get("portfolio_key");
       var matches = window.location.pathname.substr(1).match(/^(\w+)$/ig);
       if (matches) {
         portfolioKey = matches[0];
       }
-      if (!portfolioKey) {return;}
-
+     
       var handleDepotJson = function(depot){
-        $("html") .addClass("loadingFinished")
+        $("html") .scrollTop(0)    // small fix 
+                  .addClass("loadingFinished")
                   .addClass(depot.sharedKey ? "shareDepot" : "");
 
-        if (!depot.title) { // invalid
-          $.logLoading("Failure loading from Comdirect");
+        if (!depot.title) {
+          $.logLoading("Failure loading from Comdirect. Check Peerfolio ID.");
           return;
         }
        
@@ -1190,7 +1282,12 @@
         depot.valueDiffAbsToday = 0;
 
         Object.keys(depot.stocks).forEach(function(id) {
-          depot.stocks[id].priceDiffPer = Math.round(depot.stocks[id].priceDiffAbs / (depot.stocks[id].price - depot.stocks[id].priceDiffAbs) * 10000) / 100;
+          if (depot.date) {
+            depot.date = new Date(depot.date);
+          }
+
+          depot.stocks[id].priceDiffPer = Math.round(
+            depot.stocks[id].priceDiffAbs / (depot.stocks[id].price - depot.stocks[id].priceDiffAbs) * 10000) / 100;
 
           if (depot.stocks[id].limitTop && depot.stocks[id].price > depot.stocks[id].limitTop) {
             depot.stocks[id].isAboveLimit = true;
@@ -1199,19 +1296,12 @@
             depot.stocks[id].isBelowLimit = true;
           }
 
-          if (!depot.stocks[id].note) {
-            depot.stocks[id].note = "";
-          }
+          depot.stocks[id].note = depot.stocks[id].note || "";
 
           if (depot.stocks[id].date) {
             depot.stocks[id].date = new Date(depot.stocks[id].date);
-
-            depot.stocks[id].isDataFromToday =  today.getFullYear() === depot.stocks[id].date.getFullYear() &&
-                              today.getMonth() === depot.stocks[id].date.getMonth() &&
-                              today.getDate() === depot.stocks[id].date.getDate();
-
+            depot.stocks[id].isDataFromToday =  $.isSameDay(today, depot.stocks[id].date);
             depot.stocks[id].dateAge = (today.getTime() - depot.stocks[id].date.getTime()) / 1000;
-
             depot.stocks[id].isDataOld = (depot.stocks[id].dateAge > 1800);
 
             if (!depot.date || depot.date < depot.stocks[id].date) {
@@ -1229,7 +1319,8 @@
             depot.stocks[id].buyDateAge = (today.getTime() - depot.stocks[id].buyDate.getTime()) / 1000;
 
             depot.stocks[id].valueDiffAbs = depot.stocks[id].value - depot.stocks[id].buyValue;
-            depot.stocks[id].valueDiffPer = Math.round(depot.stocks[id].valueDiffAbs / depot.stocks[id].buyValue * 10000) / 100;
+            depot.stocks[id].valueDiffPer =
+              Math.round(depot.stocks[id].valueDiffAbs / depot.stocks[id].buyValue * 10000) / 100;
           }
         });
 
@@ -1237,24 +1328,29 @@
           depot.isDataFromToday =  today.getFullYear() === depot.date.getFullYear()
                                 && today.getMonth() === depot.date.getMonth()
                                 && today.getDate() === depot.date.getDate();
+          depot.dateAge = (today.getTime() - depot.date.getTime()) / 1000;
+          depot.isDataOld = (depot.dateAge > 1800);
         }
 
         $("body").prepend(
-          "<h1><a href='https://peerfol.io'>peerfol.io</a></h1>"
-          + "<div class='shareDepotInfo'><b>Please note:</b> This portfolio is <b>scaled to 1000€</b> to allow public sharing. The actual total depot value is larger.</div>"
+          "<h1><a href='https://www.peerfol.io'>peerfol.io</a></h1>"
+          + "<div class='shareDepotInfo'>"
+            + "This Peerfolio is <b>scaled to 1000€</b> to allow public sharing. "
+            + "The actual total depot value is different."
+          + "</div>"
           + "<div id='depot_table'></div>"
-          + "<div id='depot_chart_share' class='chart'></div>"
-          + "<div id='depot_chart_history' class='chart'></div>"
-          + "<div id='depot_chart_pnl' class='chart'></div>"
-          + "<div id='depot_chart_dev' class='chart'></div>"
-          + "<div id='depot_credits' class='chart'>More information: "
-            + "<a href='https://peerfol.io' target='_blank'>peerfol.io</a>"
+          + "<div id='depot_chart_share' class='chartContainer'></div>"
+          + "<div id='depot_chart_history' class='chartContainer'></div>"
+          + "<div id='depot_chart_pnl' class='chartContainer'></div>"
+          + "<div id='depot_chart_dev' class='chartContainer'></div>"
+          + "<div id='depot_credits' class='chartContainer'>More information: "
+            + "<a href='https://www.peerfol.io' target='_blank'>www.peerfol.io</a>"
           + "</div>"
         );
 
-        $("head title").text(depot.title);
+        $("head title").text(depot.title + " - peerfol.io");
 
-        $("html").addClass("loadingLoggingFinished");
+        $(".loaderInfo").hide();
         
         $.logLoading("Rending Table");
    
@@ -1274,24 +1370,23 @@
           $("#depot_chart_history").portfolioHistoryChart(depot);
           $("#depot_chart_pnl").profitAndLossChart(depot);
           $("#depot_chart_dev").depotDevelopmentChart(depot);
-          // last 12 months chart: https://developers.google.com/chart/interactive/docs/gallery/calendar
-
+          
           $.logLoading("Stock Charts created");
         });
       }
 
-      $.logLoading("Loading Data");
       $.ajax({
-        url: "https://peerfol.io/data.php"
+        url: "https://peerfol.io/api/v1/stocks"
         ,data : {
-          type : "stocks"
-          ,portfolio_key : portfolioKey
+          portfolio_key : portfolioKey
+          ,date : dateParam
         }
         ,jsonp: "wrapper"
         ,dataType: "jsonp"
         // ,jsonpCallback: 'historyData'
         ,async: true // not working with jsonp
         ,beforeSend: function() {
+          $.logLoading("Loading Data");
           if (islocalCachingAllowed) {
             var cachedDepot = sessionStorage.getItem("cachedDepot");
             if (cachedDepot) {
@@ -1316,9 +1411,10 @@
 
 
 $(function() { // main
-  $.logLoading("Initializing peerfol.io");
-
   $("html").addClass($.isDarkmode() ? "darkmode" : "lightmode");
+  $("body").append("<div class='loaderInfo'><p class='spinner'></p></div>");
+
+  $.logLoading("Initializing peerfol.io");
 
   $.initDepot();
 });
