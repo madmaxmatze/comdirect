@@ -38,6 +38,10 @@ class Stock{
     $this->name = $name;
     return $this;
   }
+
+  public function getName() {
+    return $this->name;
+  }
   
   public function setId($id) {
     $this->id = $id;
@@ -51,6 +55,10 @@ class Stock{
   public function setWkn($wkn) {
     $this->wkn = $wkn;
     return $this;
+  }
+
+  public function getWkn() {
+    return $this->wkn;
   }
 
   public function setSymbol($symbol) {

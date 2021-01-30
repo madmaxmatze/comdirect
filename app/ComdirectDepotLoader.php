@@ -1,14 +1,14 @@
 <?php
 
 require "FileCache.php";
-include_once "ComdirectDepot.php";
+include_once "Peerfolio.php";
 include_once "Stock.php";
-// include_once "ComdirectDepotHelper.php";
 
 class ComdirectDepotLoader{
   const COMDIRECT_FRIENDS_URL = "https://www.comdirect.de/inf/musterdepot/pmd/freunde.html?SORT=PROFIT_LOSS_POTENTIAL_CURRENCY_PORTFOLIO&SORTDIR=ASCENDING&portfolio_key=";
 
   private $cache;
+  private $depotKey;
 
   public function __construct($cache) {
     $this->cache = $cache;
@@ -23,13 +23,14 @@ class ComdirectDepotLoader{
 
   // and sometimes load without saving
   public function loadCachedWithoutSaving($depotKey) {
-    $depot = new ComdirectDepot($depotKey);
+    $this->depotKey = $depotKey;
+    $depot = new Peerfolio($depotKey);
 
     $depotHtml = $this->getContentFromUrl(self::COMDIRECT_FRIENDS_URL . $depotKey); 
     if ($depotHtml !== null){
       $depotHtml = $this->replaceStringsInContent($depotHtml);
-      $depot  ->setTitle($this->parseTitle($depotHtml))
-          ->setStocks($this->parseStocks($depotHtml));
+      $depot->setTitle($this->parseTitle($depotHtml))
+            ->setStocks($this->parseStocks($depotHtml));
     }
     
     return $depot;
@@ -47,7 +48,7 @@ class ComdirectDepotLoader{
     return $title;
   }
 
-  public function parseStocks($depotHtml) {
+  private function parseStocks($depotHtml) {
     $stocks = array();
   
     $stocksHtml = "";
@@ -285,13 +286,9 @@ class ComdirectDepotLoader{
     return $number;
   }
 
-  private function saveDepotDetails(ComdirectDepot $depot){
+  private function saveDepotDetails(Peerfolio $depot){
     if ($depot->isValid()) {
-      $this->cache->put(
-        "rawdepot", 
-        $depot->getDepotKey() . "_" . $depot->getLatestStockDate()->format("c"), 
-        $depot->toArray()
-      );
+      $this->cache->put("rawdepot", $this->depotKey . "_" . date("c"), $depot->toArray());
     }
   }   
 }

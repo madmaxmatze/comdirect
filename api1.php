@@ -3,7 +3,7 @@
 $timer = microtime(true);
 
 include_once __DIR__ . "/app/ComdirectDepotLoader.php";
-include_once __DIR__ . "/app/ComdirectDepot.php";
+include_once __DIR__ . "/app/Peerfolio.php";
 include_once __DIR__ . "/app/FileCache.php";
 
 
@@ -69,13 +69,14 @@ if ($type == "stocks") {
 
   // if loaded via shared key, scale to 1k --> TODO: Move logic out of Depot class to be reusable for other $depotArray 
   if ($sharedPortfolioKey) {
-    $responseData = ComdirectDepot::makeDepotArraySharable($responseData);
+    $responseData = Peerfolio::makeDepotArraySharable($responseData);
   }
   unset($responseData["value"]);
   unset($responseData["diffAbs"]);
 
 
-  if (getGETParam('format') == "csv" && !$sharedPortfolioKey) {
+  if (getGETParam('format') == "csv") {
+    if ($sharedPortfolioKey) {die();}
     include_once __DIR__ . "/app/CsvExporter.php";
     
     $csvExporter = new CsvExporter(
@@ -100,6 +101,7 @@ if ($type == "stocks") {
   ]);
 
   $responseData = [
+    "transactions" => $history->getTransactions(),
     "rows" => $history->getTimeSeries(),
     "stockFilterAvailable" => $history->getOwnedStocks(),
     "stockFilterUsed" => $filterStockId,
@@ -194,6 +196,38 @@ if ($type == "stocks") {
   }
   die();
 
+
+
+
+
+
+} else if ($type === "css") {
+  header("Content-Type: text/css");
+  echo file_get_contents('app/app.css');
+  die();
+
+
+
+
+} else if ($type === "js") {
+  //  if (preg_match_all('/[^\x00-\x7F]/', $js, $matches, PREG_OFFSET_CAPTURE)) {
+  //     var_export($matches);
+  //  }
+  header("Content-Type: application/javascript");
+  
+  require 'app/vendor/Packer.php'; // https://github.com/tholu/php-packer
+  $js = "";
+  $js .= file_get_contents('web/history.js');
+  $js .= file_get_contents('web/table.js');
+  $js .= file_get_contents('web/development.js');
+  $js .= file_get_contents('web/pnl.js');
+  $js .= file_get_contents('web/share.js');
+  $js .= file_get_contents('web/main.js');
+  $packer = new Tholu\Packer\Packer($js, 'Normal', true, false, false);
+
+  echo "/* peerfol.io JS - " . date("c") . " */\n";
+  echo $packer->pack();
+  die();
 
 
 
