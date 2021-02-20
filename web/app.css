@@ -433,10 +433,9 @@ tr:not(.watchlist) td.iterator::before {
   padding: 5px;
   background: #EEE;
   display: inline;
-  /*position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 10;*/
+}
+.darkmode .controls {
+  background: #666;
 }
 
 .controls input {

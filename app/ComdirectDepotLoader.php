@@ -1,8 +1,9 @@
 <?php
 
-require "FileCache.php";
+include_once "vendor/FileCache.php";
 include_once "Peerfolio.php";
 include_once "Stock.php";
+include_once "StockInfo.php";
 
 class ComdirectDepotLoader{
   const COMDIRECT_FRIENDS_URL = "https://www.comdirect.de/inf/musterdepot/pmd/freunde.html?SORT=PROFIT_LOSS_POTENTIAL_CURRENCY_PORTFOLIO&SORTDIR=ASCENDING&portfolio_key=";
@@ -26,7 +27,7 @@ class ComdirectDepotLoader{
     $this->depotKey = $depotKey;
     $depot = new Peerfolio($depotKey);
 
-    $depotHtml = $this->getContentFromUrl(self::COMDIRECT_FRIENDS_URL . $depotKey); 
+    $depotHtml = @file_get_contents(self::COMDIRECT_FRIENDS_URL . $depotKey); 
     if ($depotHtml !== null){
       $depotHtml = $this->replaceStringsInContent($depotHtml);
       $depot->setTitle($this->parseTitle($depotHtml))
@@ -68,78 +69,17 @@ class ComdirectDepotLoader{
   }
 
   private function addAdditionalAttributes($stock) {
-    $additionalAttr = $this->getAdditionalAttributes($stock);
+    $stockInfo = new StockInfo($this->cache, $stock->getId());
+    $attributes = $stockInfo->getAttributes();
 
-    if (isset($additionalAttr["symbol"])) {
-      $stock->setSymbol($additionalAttr["symbol"]);
+    if (isset($attributes["symbol"])) {
+      $stock->setSymbol($attributes["symbol"]);
     }
-    if (isset($additionalAttr["isin"])) {
-      $stock->setIsin($additionalAttr["isin"]);
-    }
-    if (isset($additionalAttr["totalcount"])) {
-      $stock->setTotalCount($additionalAttr["totalcount"]);
+    if (isset($attributes["isin"])) {
+      $stock->setIsin($attributes["isin"]);
     }
     
     return $stock;
-  }
-
-  private function getAdditionalAttributes($stock) {
-    $additionalAttr = $this->cache->get("stockinfo", $stock->getId());
-    if (!$additionalAttr) {
-      $additionalAttr = [
-        "comdirect_id" => $stock->getId(),
-        "wkn" => $stock->getWkn(),
-        "name" => $stock->getName(),
-      ];
-
-      /*
-      if ($stockHtml) {
-        if (preg_match('/' .
-            '\<td.*?\>Symbol\<\/td\>.*?' . 
-            '\<td.*?\>(.*?)\<\/td\>' . 
-          '/s', $stockHtml, $match)) {
-          $symbol = trim($match[1]);
-          if (strlen($symbol) == 3) {
-            $symbol = "ETR:" . $symbol;
-          } 
-          $additionalAttr["symbol"] = $symbol;
-        }
-      }
-      */
-
-      $stockHtml = $this->getContentFromUrl("https://www.comdirect.de/inf/aktien/detail/uebersicht.html?ID_NOTATION=" . $stock->getId());
-      if ($stockHtml) {
-        if (preg_match('/' .
-            '\<td.*?\>Symbol\<\/td\>.*?' . 
-            '\<td.*?\>\-*(\w*)\<\/td\>' . 
-          '/s', $stockHtml, $match)) {
-          $additionalAttr["symbol"] = trim($match[1]);
-        }
-
-        if (preg_match('/' .
-            '\&isin\=([A-Z0-9]+)\&' . 
-          '/s', $stockHtml, $match)) {
-          $additionalAttr["isin"] = trim($match[1]);
-        }
-
-        if (preg_match('/' .
-            '\<td.*?\>Aktienanzahl\<\/td\>.*?' . 
-            '\<td\>.*?(\d[\d\,\.]+).*?\<\/td\>' . 
-          '/s', $stockHtml, $match)) {
-          $count = $match[1];
-          $count = str_replace(".", "", $count);
-          $count = str_replace(",", ".", $count);
-          $count = intval($count) ;
-          if ($count) {
-            $additionalAttr["totalcount"] = $count * 1000000;
-          }
-        }
-      }
-    
-      $this->cache->put("stockinfo", $stock->getId(), $additionalAttr);
-    }
-    
-    return $additionalAttr;
   }
 
   private function removeHtml($html) {
@@ -206,7 +146,7 @@ class ComdirectDepotLoader{
     $name = preg_replace("/(\ AB\ O\.E\.\ \d*|\(.*\)|Ucits\ Etf\ |\&\#8203\;)*/i", "", $name);
 
     // cut away crap in names (starting from things like AG to the end) 
-    $name = preg_replace("/(\ ag\ |Namens\-Aktien\ O\.N\.|\ Oyj|\ Vz|plc|inc\.|\ kgaa\ |Reg\.|Fund\ |\ corp|\ Com|\,|act\.|reg\.|1C|N\.v\.|\ \-\ LC|\ \-\ Ld|inhaber|Pref\.\ ADR|\ kgag\ |INH\ O\.*N\.*|\ se\ |\ SP\.| sk|B\.v\.|Eo|\ EO\-\,|\ Cl\.|\ Tech|\ ADR|\ Dr\ |\ *\-*\ EUR\ ACC|USD\ DIS|USD\ ACC|Registered\ Shares|o\.N\.|\ Group|\ Holding|GmbH|\ co\ |\ cp\ |co\.|\ \&\#39\;|\ \-\ .\ |\ A\ |\'A\').*$/i", "", $name);
+    $name = preg_replace("/(\ ag\ |Namens\-Aktien\ O\.N\.|\ Oyj|\ Vz|plc|inc\.|\ kgaa\ |Reg\.|Fund\ |\ corp|\ Com|\,|act\.|reg\.|1C|N\.v\.|\ \-\ LC|\ \-\ Ld|inhaber|Pref\.\ ADR|\ kgag\ |INH\ O\.*N\.*|\ se\ |\ SP\.| sk|B\.v\.|Eo|\ EO\-\,|\ Cl\.|\ Tech|\ Dr\ |\ *\-*\ EUR\ ACC|USD\ DIS|USD\ ACC|Registered\ Shares|o\.N\.|\ Group|\ Holding|GmbH|\ co\ |\ cp\ |co\.|\ \&\#39\;|\ \-\ .\ |\ A\ |\'A\').*$/i", "", $name);
 
     // make first letter of all words (text with leading space) big if only in big or only in small letters - so don't do with eg: ProSiebenMedia AG
     $name = preg_replace("/[\- ]+$/i", "", $name);
@@ -259,10 +199,6 @@ class ComdirectDepotLoader{
     $data[5] = str_replace(["Rohstoffe", "Edelmetalle", "Währung", "Zertifikat", "Aktie"], ["Commodity", "Commodity", "Currency", "Certificat", "Stock"], $data[5]);
 
     return $data;
-  }
-
-  private function getContentFromUrl ($url, $maxCacheAgeSeconds = 0) {
-    return @file_get_contents($url);
   }
 
   private function replaceStringsInContent($dataStr) {

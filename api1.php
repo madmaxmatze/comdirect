@@ -4,7 +4,7 @@ $timer = microtime(true);
 
 include_once __DIR__ . "/app/ComdirectDepotLoader.php";
 include_once __DIR__ . "/app/Peerfolio.php";
-include_once __DIR__ . "/app/FileCache.php";
+include_once __DIR__ . "/app/vendor/FileCache.php";
 
 
 
@@ -31,7 +31,10 @@ $sharedPortfolioKey = null;
 // replace $portfolioKey with real key and save shared one in $sharedPortfolioKey
 if ($portfolioKeyParam && substr($portfolioKeyParam, 0, 1) === "s" && strlen($portfolioKeyParam) == 13) {
   $sharedPortfolioKey = $portfolioKeyParam;
-  $portfolioKeyParam = $cache->getLastKey("history", substr($portfolioKeyParam, 1));
+  $rawDepotKey = $cache->getLastKey("rawdepot", substr($portfolioKeyParam, 1));
+  if (preg_match('#\d{20,}#iuxs', $rawDepotKey, $matches)) {
+    $portfolioKeyParam = $matches[0];
+  }
 }
 
 $responseData = [];
@@ -77,7 +80,7 @@ if ($type == "stocks") {
 
   if (getGETParam('format') == "csv") {
     if ($sharedPortfolioKey) {die();}
-    include_once __DIR__ . "/app/CsvExporter.php";
+    include_once __DIR__ . "/app/vendor/CsvExporter.php";
     
     $csvExporter = new CsvExporter(
       "peerfolio_export" . ($dateParam ? "_" . $dateParam : "") . ".csv",
@@ -203,37 +206,40 @@ if ($type == "stocks") {
 
 } else if ($type === "css") {
   header("Content-Type: text/css");
-  echo file_get_contents('app/app.css');
+  echo file_get_contents('web/app.css');
   die();
 
 
 
 
 } else if ($type === "js") {
-  //  if (preg_match_all('/[^\x00-\x7F]/', $js, $matches, PREG_OFFSET_CAPTURE)) {
-  //     var_export($matches);
-  //  }
-  header("Content-Type: application/javascript");
-  
   require 'app/vendor/Packer.php'; // https://github.com/tholu/php-packer
-  $js = "";
-  $js .= file_get_contents('web/history.js');
-  $js .= file_get_contents('web/table.js');
-  $js .= file_get_contents('web/development.js');
-  $js .= file_get_contents('web/pnl.js');
-  $js .= file_get_contents('web/share.js');
-  $js .= file_get_contents('web/main.js');
-  $packer = new Tholu\Packer\Packer($js, 'Normal', true, false, false);
+  
+  $js = array_reduce(glob (__DIR__ . "/web/*\.js"), function ($carry, $file) {
+    return $carry . ";" . file_get_contents($file);
+  }, "");
+  $packedJs = (new Tholu\Packer\Packer($js, 'Normal', true, false, false))->pack();
 
-  echo "/* peerfol.io JS - " . date("c") . " */\n";
-  echo $packer->pack();
-  die();
+  header("Content-Type: application/javascript");
+  die("/* peerfol.io JS - " . date("c") . " - "
+      . strlen($js) . "b>" . strlen($packedJs) . "b "
+      . "(" . round(strlen($packedJs) / strlen($js) * 100) . "%)" . " */\n" 
+      . $packedJs);
 
 
 
 
 
 } else if ($type === "test") {
+  $info = "test";
+
+  // bitcoin = 234033038
+  include_once __DIR__ . "/app/StockInfo.php";
+  $stockInfo = new StockInfo($cache, 9385804);
+  $attributes = $stockInfo->getAttributes();
+
+
+  $responseData["info"] = $attributes;
   /*
     foreach ($history as $date => $depotItem) {
       if (isset($depotItem["stocks"])) {
@@ -265,13 +271,34 @@ if ($type == "stocks") {
     }
     */
 
+
+} else if ($type === "backup") {
+  /**** Migrate Peerfolios to new ID ************
+  $oldPeerfolioId = "xxx";
+  $newPeerfolioId = "yyy";
+  $oldPeerfolioKeys = $cache->getkeys("rawdepot", $oldPeerfolioId);
+  foreach ($oldPeerfolioKeys as $oldKey) {
+    $content = $cache->get("rawdepot", $oldKey);
+    $content["key"] = $newPeerfolioId;
+    $newKey = str_replace($oldPeerfolioId, $newPeerfolioId, $oldKey);
+    $cache->put("rawdepot", $newKey, $content);
+  }
+  ***********************************************/ 
+
+
+
+
+
 }
 
 
 
 
-$responseData = ['responsetime' => round((microtime(true) - $timer) * 1000)] + $responseData;
-$output = json_encode($responseData);
+$responseData = [
+                  'responsetime' => round((microtime(true) - $timer) * 1000),
+                  'memusage_mb' => round(memory_get_usage() / pow(1024, 2), 1)
+                ] + $responseData;
+$output = json_encode($responseData);  // , JSON_PRETTY_PRINT
 
 header("Content-Type: application/json");
 echo (isset($wrapperParam) ? $wrapperParam . "(" . $output . ")" : $output) . ";";

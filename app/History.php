@@ -49,13 +49,18 @@ class History {
   }
 
   private function loadDepotData() {
-    $keys = $this->cache->getKeys("rawdepot", $this->portfolioKey);
-  
+    $keys = array_reverse($this->cache->getKeys("rawdepot", $this->portfolioKey));
+
     foreach ($keys as $index => $key) {
+      if (memory_get_usage() > pow(10, 8)) {     // hosting MaxMem is 128MB = 2^27
+        break;
+      }
       $singleDayDepotData = $this->cache->get("rawdepot", $key);
       $date = substr($key, strlen($this->portfolioKey) + 1); 
       $this->depotData[$date] = $singleDayDepotData;
     }
+
+    ksort($this->depotData);  // data is loaded in reverse, therefore sort now
   }
 
   /**
@@ -63,9 +68,8 @@ class History {
    */
   private function cleanupDepotData() {
     $dates = array_keys($this->depotData);
-    
     $i = 1;
-    $emergencyExit = 1000;
+    $emergencyExit = 5000;
     while ($i < count($dates) - 2 && $emergencyExit--) {
       $lastValue    = $this->depotData[$dates[$i - 1]]["value"];
       $currentValue = $this->depotData[$dates[$i]]["value"];
@@ -77,6 +81,9 @@ class History {
       if ($lastDiffPer < 0.1 && $nextDiffPer < 0.1) {
         unset($this->depotData[$dates[$i]]);
         array_splice($dates, $i, 1);
+        
+        // actually remove file
+        $this->cache->remove("rawdepot", $this->portfolioKey . "_" . $dates[$i]);
       } else {
         $i++;
       }

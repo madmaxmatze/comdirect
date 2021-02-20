@@ -187,16 +187,16 @@ class Stock{
     if ($this->isin) {
       $stockArray["isin"] = $this->isin;
     } 
-    if ($this->note) {
-      $stockArray["note"] = $this->note;
-    }
     if ($this->limitBottom) {
       $stockArray["limitBottom"] = $this->limitBottom;
     }
     if ($this->limitTop) {
       $stockArray["limitTop"] = $this->limitTop;
     }
-
+    if ($this->note) {
+      $stockArray["note"] = $this->note;
+    }
+  
     return $stockArray;
   }
 }

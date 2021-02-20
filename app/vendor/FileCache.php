@@ -67,7 +67,7 @@ class FileCache {
       return [];
     }
 
-    $keys = array_slice(scandir($folder), 2);   // get rid off dots "." and ".."
+    $keys = array_diff(scandir($folder), ['..', '.']);
     $keys = preg_replace("/\.json$/", "", $keys);   // remove json extension
     if (isset($prefix) && $prefix) {
       $keys = array_values(array_filter($keys, 
@@ -80,6 +80,13 @@ class FileCache {
     return $keys;
   }
 
+  public function remove($namespace, $key) {
+    if (!$namespace || !$key) {return false;}
+
+    $filepath = $this->getPath($namespace, $key);
+    return @unlink($filepath);
+  } 
+  
   private function createNamespaceFolder($namespace) {
     $folder = $this->getPath($namespace);
     if (!is_dir($folder)) {
