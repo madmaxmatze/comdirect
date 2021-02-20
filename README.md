@@ -13,18 +13,18 @@ This project started 2005 with a small parser cleaning up the Comdirect HTML to 
 
 ##### Backend
  - PHP, no framework
- - no DB, just a simple [file cache](https://github.com/peerfolio/app/blob/master/vendor/FileCache.php "file cache") to persists some JSONs #NoSql
- - [ComdirectDepotLoader](https://github.com/peerfolio/app/blob/master/ComdirectDepotLoader.php "ComdirectDepotLoader.php") - Parser which takes a *portfolioKey* as input, loads the HTML from Comdirect and extract the required information to return the portfolio
- - [ComdirectDepot](https://github.com/peerfolio/app/blob/master/ComdirectDepot.php "ComdirectDepot.php") and [ComdirectStock](https://github.com/peerfolio/app/blob/master/ComdirectStock.php "ComdirectStock.php") to represent the information in simple classes
- - [Api](https://github.com/peerfolio/app/blob/master/api1.php "api1.php") serves the information via simple, open RestAPI
+ - no DB, just a simple [file cache](/app/vendor/FileCache.php "file cache") to persists some JSONs #NoSql
+ - [ComdirectDepotLoader](/app/ComdirectDepotLoader.php "ComdirectDepotLoader.php") - Parser which takes a *portfolioKey* as input, loads the HTML from Comdirect and extract the required information to return the portfolio
+ - [Peerfolio](/app/Peerfolio.php "Peerfolio.php") and [Stock](/app/Stock.php "Stock.php") to represent the information in simple classes
+ - [Api](/api1.php "api1.php") serves the information via simple, open RestAPI
 
 ##### Frontend
 - Fully Javascript based
 - old school jQuery (yes, there was a time before React)
 - no fancy build or deploy tools
 - additional libriaries loaded via public CDNs: [Google Charts](https://developers.google.com/chart "Google Charts"), [Tablesorter](https://mottie.github.io/tablesorter/docs/ "Tablesorter"), [qtip](https://github.com/qTip2/qTip2/ "qtip"), [Modernizr](https://modernizr.com/ "Modernizr")
-- [app.js](https://github.com/peerfolio/app/blob/master/app.js "app.js") contains jQuery Plugins for the table, each chart and also some Utilitly funtions
-- [app.css](https://github.com/peerfolio/app/blob/master/depot.css "app.css") make the peerfolio a little pretty, and super useful
+- [JS](/web "JS") consists of ES6 classes for the table, each chart and also some Utilitly funtions
+- [app.css](/web/app.css "app.css") to make the peerfolio a little pretty, and super useful
 
 
 ## Outlook
